@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários - New Power Auto Mecânica</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #eeeeee; color: #222; }
+        .container { width: 92%; max-width: 1100px; margin: 30px auto; }
+        .topo { background: #fff; padding: 22px 25px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,.08); margin-bottom: 20px; }
+        h1 { margin: 0; font-size: 26px; color: #111; }
+        .subtitulo { margin-top: 6px; color: #666; }
+        .grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px; }
+        .card { background: #fff; padding: 22px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,.08); }
+        h2 { margin: 0 0 15px; font-size: 20px; }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #bbb; border-radius: 6px; }
+        .botao { margin-top: 16px; width: 100%; padding: 11px; border: 0; border-radius: 6px; background: #111; color: white; font-weight: bold; cursor: pointer; }
+        .botao:hover { background: #c40000; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 11px; border-bottom: 1px solid #ddd; text-align: left; font-size: 14px; }
+        th { background: #f5f5f5; }
+        .perfil-admin { font-weight: bold; color: #c40000; }
+        .perfil-user { color: #555; }
+        .temporaria { color: #9b6400; font-weight: bold; }
+        .mensagem, .sucesso { margin-bottom: 15px; padding: 10px; border-radius: 6px; font-weight: bold; }
+        .mensagem { background: #ffebee; border: 1px solid #e57373; color: #b71c1c; }
+        .sucesso { background: #e8f5e9; border: 1px solid #81c784; color: #256029; }
+        .reset-form { margin-top: 8px; }
+        .acoes { min-width: 240px; }
+        .voltar { display: inline-block; margin-top: 20px; color: #555; text-decoration: none; }
+        .voltar:hover { color: #c40000; }
+        .observacao { margin-top: 15px; font-size: 13px; color: #666; line-height: 1.45; }
+        @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } .acoes { min-width: 0; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="topo">
+        <h1><i class="fa-solid fa-users-gear"></i> Usuários do sistema</h1>
+        <div class="subtitulo">Área administrativa — somente administradores podem acessar.</div>
+    </div>
+
+    {% if mensagem %}<div class="mensagem">{{ mensagem }}</div>{% endif %}
+    {% if sucesso %}<div class="sucesso">{{ sucesso }}</div>{% endif %}
+
+    <div class="grid">
+        <div class="card">
+            <h2>Novo usuário</h2>
+            <form method="POST" action="{{ url_for('usuarios') }}">
+                <label for="nome">Nome</label>
+                <input type="text" id="nome" name="nome" required>
+
+                <label for="usuario">Usuário para login</label>
+                <input type="text" id="usuario" name="usuario" required autocomplete="off">
+
+                <label for="senha">Senha inicial</label>
+                <input type="password" id="senha" name="senha" minlength="8" required autocomplete="new-password">
+
+                <label for="confirmar_senha">Confirmar senha</label>
+                <input type="password" id="confirmar_senha" name="confirmar_senha" minlength="8" required autocomplete="new-password">
+
+                <label for="perfil">Perfil</label>
+                <select id="perfil" name="perfil">
+                    <option value="usuario">Usuário</option>
+                    <option value="admin">Administrador</option>
+                </select>
+
+                <button type="submit" class="botao">CRIAR USUÁRIO</button>
+            </form>
+            <div class="observacao">
+                O novo usuário entra com uma senha temporária e será obrigado a criar outra senha no primeiro acesso.
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Usuários cadastrados</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Usuário</th>
+                        <th>Perfil</th>
+                        <th>Status da senha</th>
+                        <th class="acoes">Redefinir senha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in usuarios %}
+                    <tr>
+                        <td>{{ item[1] }}</td>
+                        <td>{{ item[2] }}</td>
+                        <td>
+                            {% if item[3] == 'admin' %}
+                                <span class="perfil-admin">Administrador</span>
+                            {% else %}
+                                <span class="perfil-user">Usuário</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item[4] == 1 %}
+                                <span class="temporaria">Troca pendente</span>
+                            {% else %}
+                                Normal
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="/usuarios/{{ item[0] }}/resetar-senha" class="reset-form">
+                                <input type="password" name="nova_senha" minlength="8" placeholder="Nova senha" required>
+                                <input type="password" name="confirmar_senha" minlength="8" placeholder="Confirmar" required style="margin-top:6px;">
+                                <button type="submit" class="botao">REDEFINIR</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <a href="/" class="voltar">← Voltar ao sistema</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Cadastro - New Power Auto Mecânica</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        /* CABEÇALHO */
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h1 {
+            margin: 0 0 6px 0;
+            font-size: 22px;
+            color: #222222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .whatsapp {
+            font-weight: bold;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            font-size: 18px;
+            margin-right: 5px;
+        }
+
+        /* TÍTULO */
+
+        h2 {
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+            margin-top: 15px;
+        }
+
+        /* FORMULÁRIO */
+
+        label {
+            display: block;
+            margin-top: 12px;
+            margin-bottom: 4px;
+            font-weight: bold;
+            color: #333333;
+        }
+
+        input {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #bbbbbb;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border: 2px solid #d71920;
+        }
+
+        .grupo {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* BOTÃO */
+
+        .botao-salvar {
+            margin-top: 25px;
+            width: 100%;
+            padding: 13px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #d71920;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .botao-salvar:hover {
+            background-color: #b51218;
+        }
+
+        .botao-voltar {
+            display: block;
+            margin-top: 10px;
+            padding: 10px;
+            text-align: center;
+            background-color: #222222;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        /* MENSAGEM */
+
+        .mensagem {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #e8f5e9;
+            border: 1px solid #81c784;
+            font-weight: bold;
+        }
+
+        @media (max-width: 700px) {
+
+            .grupo {
+                grid-template-columns: 1fr;
+            }
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+            <p class="whatsapp">
+
+                <span class="icone-whatsapp">●</span>
+
+                (62) 99117-5451
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- TÍTULO -->
+
+    <h2>
+        Cadastro de Cliente e Veículo
+    </h2>
+
+
+    <form method="POST">
+
+
+        <!-- CLIENTE -->
+
+        <h2>
+            1. Dados do Cliente
+        </h2>
+
+
+        <label for="nome">
+            Nome
+        </label>
+
+        <input
+            type="text"
+            id="nome"
+            name="nome"
+            placeholder="Digite o nome do cliente"
+            required
+        >
+
+
+        <label for="telefone">
+            Telefone
+        </label>
+
+        <input
+            type="text"
+            id="telefone"
+            name="telefone"
+            placeholder="Digite o telefone"
+            required
+        >
+
+
+        <label for="cpf">
+            CPF/CNPJ
+        </label>
+
+        <input
+            type="text"
+            id="cpf"
+            name="cpf"
+            placeholder="Opcional"
+        >
+
+
+        <!-- VEÍCULO -->
+
+        <h2>
+            2. Dados do Veículo
+        </h2>
+
+
+        <div class="grupo">
+
+            <div>
+
+                <label for="placa">
+                    Placa
+                </label>
+
+                <input
+                    type="text"
+                    id="placa"
+                    name="placa"
+                    placeholder="Digite a placa"
+                    required
+                >
+
+            </div>
+
+
+            <div>
+
+                <label for="marca">
+                    Marca
+                </label>
+
+                <input
+                    type="text"
+                    id="marca"
+                    name="marca"
+                    placeholder="Digite a marca"
+                >
+
+            </div>
+
+        </div>
+
+
+        <div class="grupo">
+
+            <div>
+
+                <label for="modelo">
+                    Modelo
+                </label>
+
+                <input
+                    type="text"
+                    id="modelo"
+                    name="modelo"
+                    placeholder="Digite o modelo"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label for="ano">
+                    Ano
+                </label>
+
+                <input
+                    type="number"
+                    id="ano"
+                    name="ano"
+                    placeholder="Digite o ano"
+                >
+
+            </div>
+
+        </div>
+
+
+        <label for="quilometragem">
+            Quilometragem
+        </label>
+
+        <input
+            type="number"
+            id="quilometragem"
+            name="quilometragem"
+            placeholder="Digite a quilometragem"
+        >
+
+
+        <!-- SALVAR -->
+
+        <button
+            type="submit"
+            class="botao-salvar"
+        >
+            SALVAR CLIENTE E VEÍCULO
+        </button>
+
+
+    </form>
+
+
+    {% if mensagem %}
+
+        <div class="mensagem">
+            {{ mensagem }}
+        </div>
+
+    {% endif %}
+
+
+    <!-- NAVEGAÇÃO -->
+
+    <a
+        href="/"
+        class="botao-voltar"
+    >
+        Voltar ao Menu Principal
+    </a>
+
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alterar senha</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #eeeeee;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            width: 100%;
+            max-width: 470px;
+            background: #fff;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.12);
+        }
+        h1 { margin: 0 0 8px; color: #111; font-size: 24px; }
+        .subtitulo { color: #666; margin-bottom: 22px; }
+        .obrigatoria {
+            padding: 11px 12px;
+            margin-bottom: 18px;
+            border-left: 4px solid #c40000;
+            background: #fff5f5;
+            color: #6f0000;
+            font-size: 14px;
+        }
+        label { display: block; margin: 12px 0 5px; font-weight: bold; color: #333; }
+        input {
+            width: 100%; padding: 11px;
+            border: 1px solid #c5c5c5; border-radius: 6px; font-size: 15px;
+        }
+        .botao {
+            width: 100%; margin-top: 22px; padding: 12px;
+            border: 0; border-radius: 6px; background: #111; color: #fff;
+            font-weight: bold; cursor: pointer;
+        }
+        .botao:hover { background: #c40000; }
+        .erro, .sucesso {
+            margin-top: 15px; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px;
+        }
+        .erro { background: #ffebee; border: 1px solid #e57373; color: #b71c1c; }
+        .sucesso { background: #e8f5e9; border: 1px solid #81c784; color: #256029; }
+        .voltar { display: block; margin-top: 15px; text-align: center; color: #555; text-decoration: none; font-size: 14px; }
+        .voltar:hover { color: #c40000; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Alterar senha</h1>
+        <div class="subtitulo">Usuário: <strong>{{ session["nome_usuario"] }}</strong></div>
+
+        {% if obrigatoria %}
+            <div class="obrigatoria">
+                Esta troca de senha é obrigatória antes de continuar no sistema.
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('alterar_senha') }}">
+            <label for="senha_atual">Senha atual</label>
+            <input type="password" id="senha_atual" name="senha_atual" required autocomplete="current-password">
+
+            <label for="nova_senha">Nova senha</label>
+            <input type="password" id="nova_senha" name="nova_senha" minlength="8" required autocomplete="new-password">
+
+            <label for="confirmar_senha">Confirmar nova senha</label>
+            <input type="password" id="confirmar_senha" name="confirmar_senha" minlength="8" required autocomplete="new-password">
+
+            <button type="submit" class="botao">SALVAR NOVA SENHA</button>
+        </form>
+
+        {% if mensagem %}<div class="erro">{{ mensagem }}</div>{% endif %}
+        {% if sucesso %}<div class="sucesso">{{ sucesso }}</div>{% endif %}
+
+        {% if not obrigatoria %}
+            <a href="/" class="voltar">Voltar ao sistema</a>
+        {% endif %}
+    </div>
+</body>
+</html>

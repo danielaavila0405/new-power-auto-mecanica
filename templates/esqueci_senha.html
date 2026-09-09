@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esqueci minha senha</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #eeeeee;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .card {
+            width: 100%;
+            max-width: 470px;
+            background: #fff;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.12);
+            text-align: center;
+        }
+        h1 { margin: 0 0 15px; color: #111; font-size: 24px; }
+        p { color: #555; line-height: 1.5; }
+        .aviso {
+            margin: 22px 0;
+            padding: 15px;
+            border-left: 4px solid #c40000;
+            background: #f7f7f7;
+            text-align: left;
+        }
+        .botao {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 11px 18px;
+            border-radius: 6px;
+            background: #111;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .botao:hover { background: #c40000; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Esqueci minha senha</h1>
+        <p>Para manter o sistema seguro, a redefinição de senha é feita pelo administrador.</p>
+
+        <div class="aviso">
+            Solicite ao administrador da New Power Auto Mecânica que redefina sua senha.
+            Depois do acesso, o sistema solicitará a troca da senha temporária.
+        </div>
+
+        <a href="/login" class="botao">VOLTAR PARA O LOGIN</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,2373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Nova Ordem de Serviço</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        /* CABEÇALHO */
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h2 {
+            border: none;
+            margin: 0 0 6px 0;
+            padding: 0;
+            font-size: 22px;
+            color: #222222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            color: #555555;
+            font-size: 14px;
+        }
+
+        .whatsapp {
+            font-weight: bold;
+        }
+
+        .whatsapp a {
+            color: #222222;
+            text-decoration: none;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            font-size: 19px;
+            margin-right: 6px;
+        }
+
+        /* TÍTULO */
+
+        h1 {
+            text-align: center;
+            margin: 5px 0 2px 0;
+            color: #222222;
+            font-size: 25px;
+        }
+
+        .data-os {
+            text-align: center;
+            color: #666666;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        /* LAYOUT */
+
+        .grid-principal {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .cliente-veiculo {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* TÍTULOS */
+
+        h2 {
+            margin-top: 14px;
+            margin-bottom: 6px;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 4px;
+            font-size: 18px;
+            color: #222222;
+        }
+
+        label {
+            display: block;
+            margin-top: 6px;
+            margin-bottom: 3px;
+            font-weight: bold;
+            color: #333333;
+        }
+
+        /* CAMPOS */
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 2px;
+            border: 1px solid #bbbbbb;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border: 2px solid #d71920;
+        }
+
+        /* TABELAS */
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 7px;
+        }
+
+        th,
+        td {
+            border: 1px solid #dddddd;
+            padding: 6px;
+        }
+
+        th {
+            background-color: #222222;
+            color: white;
+            font-size: 14px;
+        }
+
+        td input {
+            margin-top: 0;
+            padding: 7px;
+        }
+
+        /* BOTÕES */
+
+        .botao-adicionar {
+            margin-top: 7px;
+            padding: 7px 12px;
+            cursor: pointer;
+            border: 1px solid #d71920;
+            background-color: white;
+            color: #d71920;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .botao-adicionar:hover {
+            background-color: #d71920;
+            color: white;
+        }
+
+        .botao-remover {
+            padding: 5px 9px;
+            cursor: pointer;
+            border: 1px solid #dddddd;
+            background-color: white;
+            color: #d71920;
+            border-radius: 4px;
+        }
+
+        .botao-remover:hover {
+            background-color: #d71920;
+            color: white;
+        }
+
+        .botao-pequeno {
+            border: none;
+            background-color: #d71920;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .botao-pequeno:hover {
+            background-color: #b51218;
+        }
+
+        /* CADASTRO RÁPIDO */
+
+        .cadastro-rapido {
+            display: none;
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #eeeeee;
+            border-left: 4px solid #d71920;
+            border-radius: 5px;
+        }
+
+        .cadastro-rapido strong {
+            color: #222222;
+        }
+
+        .botao-salvar-rapido {
+            margin-top: 10px;
+            width: 100%;
+            padding: 9px;
+            border: none;
+            border-radius: 4px;
+            background-color: #222222;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .botao-salvar-rapido:hover {
+            background-color: #444444;
+        }
+
+        .botao-cancelar {
+            margin-top: 5px;
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #999999;
+            border-radius: 4px;
+            background-color: white;
+            color: #222222;
+            cursor: pointer;
+        }
+
+        /* RESUMO */
+
+        .resumo {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #eeeeee;
+            border-left: 5px solid #d71920;
+            border-radius: 5px;
+        }
+
+        .resumo h2 {
+            margin-top: 0;
+            border-bottom: none;
+            font-size: 20px;
+        }
+
+        .linha-resumo {
+            display: flex;
+            justify-content: space-between;
+            margin: 7px 0;
+            font-size: 16px;
+        }
+
+        .total {
+            font-size: 22px;
+            font-weight: bold;
+            border-top: 2px solid #222222;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        .valor-total {
+            color: #d71920;
+        }
+
+        /* SALVAR */
+
+        .botao-salvar {
+            margin-top: 18px;
+            width: 100%;
+            padding: 13px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #d71920;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .botao-salvar:hover {
+            background-color: #b51218;
+        }
+
+        /* VOLTAR */
+
+        .botao-voltar {
+            display: block;
+            margin-top: 10px;
+            padding: 10px;
+            text-align: center;
+            background-color: #222222;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        /* MENSAGEM */
+
+        .mensagem {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border: 1px solid #81c784;
+            font-weight: bold;
+        }
+
+        .mensagem-erro {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #ffebee;
+            border: 1px solid #e57373;
+            color: #b71c1c;
+            font-weight: bold;
+        }
+
+        /* RESPONSIVO */
+
+        @media (max-width: 800px) {
+
+            .grid-principal {
+                grid-template-columns: 1fr;
+            }
+
+            .cliente-veiculo {
+                grid-template-columns: 1fr;
+            }
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- ========================================= -->
+    <!-- CABEÇALHO -->
+    <!-- ========================================= -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h2>
+                New Power Auto Mecânica
+            </h2>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+            <p class="whatsapp">
+
+                <i class="fa-brands fa-whatsapp icone-whatsapp"></i>
+
+                <a
+                    href="https://wa.me/5562991175451"
+                    target="_blank"
+                >
+                    (62) 99117-5451
+                </a>
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- TÍTULO -->
+    <!-- ========================================= -->
+
+    <h1>
+        Nova Ordem de Serviço
+    </h1>
+
+
+    <div class="data-os">
+
+        Data e hora:
+        <strong id="dataHora"></strong>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- FORMULÁRIO PRINCIPAL DA OS -->
+    <!-- ========================================= -->
+
+    <form method="POST" id="formOS">
+
+
+        <div class="grid-principal">
+
+
+            <!-- ================================= -->
+            <!-- COLUNA ESQUERDA -->
+            <!-- ================================= -->
+
+            <div>
+
+
+                <!-- ================================= -->
+                <!-- CLIENTE E VEÍCULO -->
+                <!-- ================================= -->
+
+                <div class="cliente-veiculo">
+
+
+                    <!-- ============================= -->
+                    <!-- CLIENTE -->
+                    <!-- ============================= -->
+
+                    <div>
+
+                        <h2>
+                            1. Cliente
+                        </h2>
+
+
+                        <div style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-top: 6px;
+                            margin-bottom: 3px;
+                        ">
+
+                            <label style="margin: 0;">
+                                Buscar cliente
+                            </label>
+
+                            <button
+                                type="button"
+                                class="botao-pequeno"
+                                onclick="abrirCadastroCliente()"
+                            >
+                                + Novo cliente
+                            </button>
+
+                        </div>
+
+
+                        <input
+                            type="text"
+                            id="buscaCliente"
+                            placeholder="Digite o nome do cliente..."
+                            oninput="buscarCliente()"
+                        >
+
+
+                        <select
+                            id="cliente"
+                            name="cliente"
+                            required
+                        >
+
+                            <option value="">
+                                Selecione o cliente
+                            </option>
+
+                            {% for cliente in clientes %}
+
+                            <option
+                                value="{{ cliente[0] }}"
+                                {% if cliente[0]|string == cliente_selecionado|string %}
+                                selected
+                                {% endif %}
+                            >
+
+                                {{ cliente[1] }} -
+                                {{ cliente[2] }}
+
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+
+                        <!-- ============================= -->
+                        <!-- CADASTRO RÁPIDO CLIENTE -->
+                        <!-- ============================= -->
+
+                        <div
+                            id="cadastroCliente"
+                            class="cadastro-rapido"
+                        >
+
+                            <strong>
+                                Cadastrar novo cliente
+                            </strong>
+
+
+                            <label>
+                                Nome
+                            </label>
+
+                            <input
+                                type="text"
+                                id="novoClienteNome"
+                                placeholder="Nome completo"
+                            >
+
+
+                            <label>
+                                Telefone
+                            </label>
+
+                            <input
+                                type="text"
+                                id="novoClienteTelefone"
+                                placeholder="(62) 99299-6551"
+                                maxlength="15"
+                                oninput="formatarTelefone(this)"
+                            >
+
+
+                            <label>
+                                CPF/CNPJ
+                            </label>
+
+                            <input
+                                type="text"
+                                id="novoClienteCpf"
+                                placeholder="CPF ou CNPJ"
+                            >
+
+
+                            <div
+                                id="erroCliente"
+                                class="mensagem-erro"
+                                style="display: none;"
+                            ></div>
+
+
+                            <button
+                                type="button"
+                                class="botao-salvar-rapido"
+                                onclick="salvarNovoCliente()"
+                            >
+                                SALVAR CLIENTE
+                            </button>
+
+
+                            <button
+                                type="button"
+                                class="botao-cancelar"
+                                onclick="fecharCadastroCliente()"
+                            >
+                                Cancelar
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ============================= -->
+                    <!-- VEÍCULO -->
+                    <!-- ============================= -->
+
+                    <div>
+
+                        <h2>
+                            2. Veículo
+                        </h2>
+
+
+                        <div style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-top: 6px;
+                            margin-bottom: 3px;
+                        ">
+
+                            <label style="margin: 0;">
+                                Buscar veículo
+                            </label>
+
+                            <button
+                                type="button"
+                                class="botao-pequeno"
+                                onclick="abrirCadastroVeiculo()"
+                            >
+                                + Novo veículo
+                            </button>
+
+                        </div>
+
+
+                        <input
+                            type="text"
+                            id="buscaVeiculo"
+                            placeholder="Digite a placa ou modelo..."
+                            oninput="buscarVeiculo()"
+                        >
+
+
+                        <select
+                            id="veiculo"
+                            name="veiculo"
+                            required
+                        >
+
+                            <option value="">
+                                Selecione o veículo
+                            </option>
+
+                            {% for veiculo in veiculos %}
+
+                            <option
+                                value="{{ veiculo[0] }}"
+                                data-cliente="{{ veiculo[4] }}"
+                                {% if veiculo[0]|string == veiculo_selecionado|string %}
+                                selected
+                                {% endif %}
+                            >
+
+                                {{ veiculo[1] }} -
+                                {{ veiculo[2] }}
+                                {{ veiculo[3] }}
+
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+
+                        <!-- ============================= -->
+                        <!-- CADASTRO RÁPIDO VEÍCULO -->
+                        <!-- ============================= -->
+
+                        <div
+                            id="cadastroVeiculo"
+                            class="cadastro-rapido"
+                        >
+
+                            <strong>
+                                Cadastrar novo veículo
+                            </strong>
+
+
+                            <label>
+                                Placa
+                            </label>
+
+                            <input
+                                type="text"
+                                id="novoVeiculoPlaca"
+                                placeholder="ABC1D23"
+                                maxlength="7"
+                                style="text-transform: uppercase;"
+                            >
+
+
+                            <label>
+                                Marca
+                            </label>
+
+                            <input
+                                type="text"
+                                id="novoVeiculoMarca"
+                                placeholder="Ex.: Volkswagen"
+                            >
+
+
+                            <label>
+                                Modelo
+                            </label>
+
+                            <input
+                                type="text"
+                                id="novoVeiculoModelo"
+                                placeholder="Ex.: Gol"
+                            >
+
+
+                            <label>
+                                Ano
+                            </label>
+
+                            <input
+                                type="number"
+                                id="novoVeiculoAno"
+                                placeholder="2020"
+                            >
+
+
+                            <label>
+                                Quilometragem
+                            </label>
+
+                            <input
+                                type="number"
+                                id="novoVeiculoQuilometragem"
+                                placeholder="Ex.: 85000"
+                            >
+
+
+                            <div
+                                id="erroVeiculo"
+                                class="mensagem-erro"
+                                style="display: none;"
+                            ></div>
+
+
+                            <button
+                                type="button"
+                                class="botao-salvar-rapido"
+                                onclick="salvarNovoVeiculo()"
+                            >
+                                SALVAR VEÍCULO
+                            </button>
+
+
+                            <button
+                                type="button"
+                                class="botao-cancelar"
+                                onclick="fecharCadastroVeiculo()"
+                            >
+                                Cancelar
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================= -->
+                <!-- PEÇAS -->
+                <!-- ================================= -->
+
+                <h2>
+                    3. Peças
+                </h2>
+
+
+                <table id="tabelaPecas">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Peça
+                            </th>
+
+                            <th>
+                                Quantidade
+                            </th>
+
+                            <th>
+                                Valor unitário
+                            </th>
+
+                            <th>
+                                Total
+                            </th>
+
+                            <th>
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for peca in pecas_salvas %}
+
+                        <tr>
+
+                            <td>
+
+                                <input
+                                    type="text"
+                                    name="peca_descricao"
+                                    value="{{ peca.descricao }}"
+                                    class="peca-descricao"
+                                    required
+                                >
+
+                            </td>
+
+
+                            <td>
+
+                                <input
+                                    type="number"
+                                    name="peca_quantidade"
+                                    value="{{ peca.quantidade|int }}"
+                                    min="1"
+                                    class="peca-quantidade"
+                                    oninput="calcularTotais()"
+                                    required
+                                >
+
+                            </td>
+
+
+                            <td>
+
+                                <input
+                                    type="text"
+                                    name="peca_valor"
+                                    value="{{ 'R$ %.2f'|format(peca.valor) }}"
+                                    class="peca-valor moeda"
+                                    oninput="calcularTotais()" onblur="formatarCampoMoeda(this); calcularTotais()"
+                                    required
+                                >
+
+                            </td>
+
+
+                            <td class="peca-total">
+                                R$ {{ "%.2f"|format(peca.total) }}
+                            </td>
+
+
+                            <td>
+
+                                <button
+                                    type="button"
+                                    class="botao-remover"
+                                    onclick="
+                                        this.closest('tr').remove();
+                                        calcularTotais();
+                                    "
+                                >
+                                    X
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+
+                <button
+                    type="button"
+                    class="botao-adicionar"
+                    onclick="adicionarPeca()"
+                >
+                    + Adicionar peça
+                </button>
+
+
+                <!-- ================================= -->
+                <!-- SERVIÇOS -->
+                <!-- ================================= -->
+
+                <h2>
+                    4. Serviços
+                </h2>
+
+
+                <table id="tabelaServicos">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Serviço
+                            </th>
+
+                            <th>
+                                Valor
+                            </th>
+
+                            <th>
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for servico in servicos_salvos %}
+
+                        <tr>
+
+                            <td>
+
+                                <input
+                                    type="text"
+                                    name="servico_descricao"
+                                    value="{{ servico.descricao }}"
+                                    class="servico-descricao"
+                                    required
+                                >
+
+                            </td>
+
+
+                            <td>
+
+                                <input
+                                    type="text"
+                                    name="servico_valor"
+                                    value="{{ 'R$ %.2f'|format(servico.valor) }}"
+                                    class="servico-valor moeda"
+                                    oninput="calcularTotais()" onblur="formatarCampoMoeda(this); calcularTotais()"
+                                    required
+                                >
+
+                            </td>
+
+
+                            <td>
+
+                                <button
+                                    type="button"
+                                    class="botao-remover"
+                                    onclick="
+                                        this.closest('tr').remove();
+                                        calcularTotais();
+                                    "
+                                >
+                                    X
+                                </button>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+
+                <button
+                    type="button"
+                    class="botao-adicionar"
+                    onclick="adicionarServico()"
+                >
+                    + Adicionar serviço
+                </button>
+
+
+            </div>
+
+
+            <!-- ================================= -->
+            <!-- COLUNA DIREITA -->
+            <!-- ================================= -->
+
+            <div>
+
+
+                <!-- RESPONSÁVEL -->
+
+                <h2>
+                    5. Responsável pela mão de obra
+                </h2>
+
+
+                <label>
+                    Quem realizou o serviço?
+                </label>
+
+
+                <select
+                    name="responsavel"
+                    required
+                >
+
+                    <option value="">
+                        Selecione
+                    </option>
+
+                    <option
+                        value="Leonardo"
+                        {% if responsavel_selecionado == "Leonardo" %}
+                        selected
+                        {% endif %}
+                    >
+                        Leonardo
+                    </option>
+
+                    <option
+                        value="Henrique"
+                        {% if responsavel_selecionado == "Henrique" %}
+                        selected
+                        {% endif %}
+                    >
+                        Henrique
+                    </option>
+
+                </select>
+
+
+                <!-- PAGAMENTO -->
+
+                <h2>
+                    6. Pagamento
+                </h2>
+
+
+                <label>
+                    Forma de pagamento
+                </label>
+
+
+                <select
+                    name="pagamento"
+                    required
+                >
+
+                    <option value="">
+                        Selecione
+                    </option>
+
+                    <option
+                        value="Pix"
+                        {% if pagamento_selecionado == "Pix" %}
+                        selected
+                        {% endif %}
+                    >
+                        Pix
+                    </option>
+
+                    <option
+                        value="Dinheiro"
+                        {% if pagamento_selecionado == "Dinheiro" %}
+                        selected
+                        {% endif %}
+                    >
+                        Dinheiro
+                    </option>
+
+                    <option
+                        value="Cartão"
+                        {% if pagamento_selecionado == "Cartão" %}
+                        selected
+                        {% endif %}
+                    >
+                        Cartão
+                    </option>
+
+                </select>
+
+
+                <!-- RESUMO -->
+
+                <div class="resumo">
+
+                    <h2>
+                        Resumo da OS
+                    </h2>
+
+
+                    <div class="linha-resumo">
+
+                        <span>
+                            Peças:
+                        </span>
+
+                        <span id="totalPecas">
+                            R$ 0,00
+                        </span>
+
+                    </div>
+
+
+                    <div class="linha-resumo">
+
+                        <span>
+                            Mão de obra:
+                        </span>
+
+                        <span id="totalServicos">
+                            R$ 0,00
+                        </span>
+
+                    </div>
+
+
+                    <div class="linha-resumo total">
+
+                        <span>
+                            TOTAL:
+                        </span>
+
+                        <span
+                            id="totalOS"
+                            class="valor-total"
+                        >
+                            R$ 0,00
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================= -->
+        <!-- SALVAR OS -->
+        <!-- ================================= -->
+
+        <button
+            type="submit"
+            class="botao-salvar"
+        >
+            SALVAR ORDEM DE SERVIÇO
+        </button>
+
+
+    </form>
+
+
+    <!-- VOLTAR -->
+
+    <a
+        href="/"
+        class="botao-voltar"
+    >
+        Voltar
+    </a>
+
+
+    <!-- MENSAGEM -->
+
+    {% if mensagem %}
+
+    <div class="mensagem">
+
+        {{ mensagem }}
+
+    </div>
+
+    {% endif %}
+
+
+</div>
+
+
+<script>
+
+
+// ==================================================
+// DATA AUTOMÁTICA
+// ==================================================
+
+function atualizarDataHora() {
+
+    let agora = new Date();
+
+    let data =
+        agora.toLocaleDateString("pt-BR");
+
+    let hora =
+        agora.toLocaleTimeString(
+            "pt-BR",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    document.getElementById("dataHora").textContent =
+        data + " às " + hora;
+}
+
+atualizarDataHora();
+
+
+// ==================================================
+// BUSCAR CLIENTE
+// ==================================================
+
+function buscarCliente() {
+
+    let busca =
+        document
+        .getElementById("buscaCliente")
+        .value
+        .toLowerCase()
+        .trim();
+
+    let select =
+        document.getElementById("cliente");
+
+    if (busca === "") {
+
+        select.value = "";
+
+        atualizarVeiculos();
+
+        return;
+    }
+
+    for (
+        let i = 0;
+        i < select.options.length;
+        i++
+    ) {
+
+        let opcao =
+            select.options[i];
+
+        let texto =
+            opcao.text.toLowerCase();
+
+        if (
+            opcao.value !== "" &&
+            texto.includes(busca)
+        ) {
+
+            select.value = opcao.value;
+
+            atualizarVeiculos();
+
+            return;
+        }
+    }
+}
+
+
+// ==================================================
+// BUSCAR VEÍCULO
+// ==================================================
+
+function buscarVeiculo() {
+
+    let busca =
+        document
+        .getElementById("buscaVeiculo")
+        .value
+        .toLowerCase()
+        .trim();
+
+    let select =
+        document.getElementById("veiculo");
+
+    for (
+        let i = 0;
+        i < select.options.length;
+        i++
+    ) {
+
+        let opcao =
+            select.options[i];
+
+        let texto =
+            opcao.text.toLowerCase();
+
+        if (
+            opcao.value !== "" &&
+            !opcao.hidden &&
+            texto.includes(busca)
+        ) {
+
+            select.value = opcao.value;
+
+            return;
+        }
+    }
+}
+
+
+// ==================================================
+// FILTRAR VEÍCULOS
+// ==================================================
+
+document
+    .getElementById("cliente")
+    .addEventListener(
+        "change",
+        function() {
+
+            atualizarVeiculos();
+
+        }
+    );
+
+
+function atualizarVeiculos() {
+
+    let clienteSelecionado =
+        document.getElementById("cliente").value;
+
+    let veiculos =
+        document.getElementById("veiculo");
+
+    for (
+        let i = 0;
+        i < veiculos.options.length;
+        i++
+    ) {
+
+        let opcao =
+            veiculos.options[i];
+
+        if (opcao.value === "") {
+            continue;
+        }
+
+        let clienteVeiculo =
+            opcao.getAttribute(
+                "data-cliente"
+            );
+
+        if (
+            clienteSelecionado !== "" &&
+            clienteVeiculo === clienteSelecionado
+        ) {
+
+            opcao.hidden = false;
+
+        } else {
+
+            opcao.hidden = true;
+
+        }
+    }
+
+    veiculos.value = "";
+}
+
+
+// ==================================================
+// ABRIR CADASTRO DE CLIENTE
+// ==================================================
+
+function abrirCadastroCliente() {
+
+    document
+        .getElementById("cadastroCliente")
+        .style.display = "block";
+
+    document
+        .getElementById("novoClienteNome")
+        .focus();
+}
+
+
+// ==================================================
+// FECHAR CADASTRO DE CLIENTE
+// ==================================================
+
+function fecharCadastroCliente() {
+
+    document
+        .getElementById("cadastroCliente")
+        .style.display = "none";
+
+    document
+        .getElementById("erroCliente")
+        .style.display = "none";
+}
+
+
+// ==================================================
+// SALVAR NOVO CLIENTE
+// ==================================================
+
+async function salvarNovoCliente() {
+
+    let nome =
+        document
+        .getElementById("novoClienteNome")
+        .value
+        .trim();
+
+    let telefone =
+        document
+        .getElementById("novoClienteTelefone")
+        .value
+        .trim();
+
+    let cpf =
+        document
+        .getElementById("novoClienteCpf")
+        .value
+        .trim();
+
+    let erro =
+        document.getElementById("erroCliente");
+
+
+    if (nome === "") {
+
+        erro.textContent =
+            "Informe o nome do cliente.";
+
+        erro.style.display = "block";
+
+        return;
+    }
+
+
+    if (telefone === "") {
+
+        erro.textContent =
+            "Informe o telefone do cliente.";
+
+        erro.style.display = "block";
+
+        return;
+    }
+
+
+    let dados =
+        new URLSearchParams();
+
+    dados.append("nome", nome);
+    dados.append("telefone", telefone);
+    dados.append("cpf", cpf);
+
+
+    try {
+
+        let resposta =
+            await fetch(
+                "/os/novo-cliente",
+                {
+                    method: "POST",
+                    body: dados
+                }
+            );
+
+
+        let resultado =
+            await resposta.json();
+
+
+        if (!resultado.sucesso) {
+
+            erro.textContent =
+                resultado.mensagem ||
+                "Não foi possível cadastrar o cliente.";
+
+            erro.style.display = "block";
+
+            return;
+        }
+
+
+        // Adicionar cliente na lista
+
+        let select =
+            document.getElementById("cliente");
+
+
+        let opcao =
+            document.createElement("option");
+
+
+        opcao.value =
+            resultado.id_cliente;
+
+
+        opcao.textContent =
+            resultado.nome +
+            " - " +
+            resultado.telefone;
+
+
+        select.appendChild(opcao);
+
+
+        // Selecionar automaticamente
+
+        select.value =
+            resultado.id_cliente;
+
+
+        // Atualizar veículos
+
+        atualizarVeiculos();
+
+
+        // Limpar busca
+
+        document
+            .getElementById("buscaCliente")
+            .value =
+            resultado.nome;
+
+
+        // Fechar cadastro
+
+        document
+            .getElementById("cadastroCliente")
+            .style.display =
+            "none";
+
+
+        // Limpar campos
+
+        document
+            .getElementById("novoClienteNome")
+            .value = "";
+
+        document
+            .getElementById("novoClienteTelefone")
+            .value = "";
+
+        document
+            .getElementById("novoClienteCpf")
+            .value = "";
+
+        erro.style.display = "none";
+
+
+        alert(
+            "Cliente cadastrado com sucesso!"
+        );
+
+    } catch (erro) {
+
+        document
+            .getElementById("erroCliente")
+            .textContent =
+            "Erro ao cadastrar cliente.";
+
+        document
+            .getElementById("erroCliente")
+            .style.display =
+            "block";
+    }
+}
+
+
+// ==================================================
+// ABRIR CADASTRO DE VEÍCULO
+// ==================================================
+
+function abrirCadastroVeiculo() {
+
+    let cliente =
+        document.getElementById("cliente").value;
+
+
+    if (cliente === "") {
+
+        alert(
+            "Primeiro selecione um cliente."
+        );
+
+        return;
+    }
+
+
+    document
+        .getElementById("cadastroVeiculo")
+        .style.display =
+        "block";
+
+
+    document
+        .getElementById("novoVeiculoPlaca")
+        .focus();
+}
+
+
+// ==================================================
+// FECHAR CADASTRO DE VEÍCULO
+// ==================================================
+
+function fecharCadastroVeiculo() {
+
+    document
+        .getElementById("cadastroVeiculo")
+        .style.display =
+        "none";
+
+    document
+        .getElementById("erroVeiculo")
+        .style.display =
+        "none";
+}
+
+
+// ==================================================
+// SALVAR NOVO VEÍCULO
+// ==================================================
+
+async function salvarNovoVeiculo() {
+
+    let idCliente =
+        document
+        .getElementById("cliente")
+        .value;
+
+    let placa =
+        document
+        .getElementById("novoVeiculoPlaca")
+        .value
+        .trim()
+        .toUpperCase();
+
+    let marca =
+        document
+        .getElementById("novoVeiculoMarca")
+        .value
+        .trim();
+
+    let modelo =
+        document
+        .getElementById("novoVeiculoModelo")
+        .value
+        .trim();
+
+    let ano =
+        document
+        .getElementById("novoVeiculoAno")
+        .value
+        .trim();
+
+    let quilometragem =
+        document
+        .getElementById("novoVeiculoQuilometragem")
+        .value
+        .trim();
+
+    let erro =
+        document.getElementById("erroVeiculo");
+
+
+    if (idCliente === "") {
+
+        erro.textContent =
+            "Selecione um cliente antes de cadastrar o veículo.";
+
+        erro.style.display = "block";
+
+        return;
+    }
+
+
+    if (placa === "") {
+
+        erro.textContent =
+            "Informe a placa.";
+
+        erro.style.display = "block";
+
+        return;
+    }
+
+
+    if (marca === "") {
+
+        erro.textContent =
+            "Informe a marca.";
+
+        erro.style.display = "block";
+
+        return;
+    }
+
+
+    if (modelo === "") {
+
+        erro.textContent =
+            "Informe o modelo.";
+
+        erro.style.display = "block";
+
+        return;
+    }
+
+
+    let dados =
+        new URLSearchParams();
+
+
+    dados.append(
+        "id_cliente",
+        idCliente
+    );
+
+    dados.append(
+        "placa",
+        placa
+    );
+
+    dados.append(
+        "marca",
+        marca
+    );
+
+    dados.append(
+        "modelo",
+        modelo
+    );
+
+    dados.append(
+        "ano",
+        ano
+    );
+
+    dados.append(
+        "quilometragem",
+        quilometragem
+    );
+
+
+    try {
+
+        let resposta =
+            await fetch(
+                "/os/novo-veiculo",
+                {
+                    method: "POST",
+                    body: dados
+                }
+            );
+
+
+        let resultado =
+            await resposta.json();
+
+
+        if (!resultado.sucesso) {
+
+            erro.textContent =
+                resultado.mensagem ||
+                "Não foi possível cadastrar o veículo.";
+
+            erro.style.display = "block";
+
+            return;
+        }
+
+
+        // Adicionar veículo na lista
+
+        let select =
+            document.getElementById("veiculo");
+
+
+        let opcao =
+            document.createElement("option");
+
+
+        opcao.value =
+            resultado.id_veiculo;
+
+
+        opcao.setAttribute(
+            "data-cliente",
+            resultado.id_cliente
+        );
+
+
+        opcao.textContent =
+            resultado.placa +
+            " - " +
+            resultado.marca +
+            " " +
+            resultado.modelo;
+
+
+        select.appendChild(opcao);
+
+
+        // Selecionar automaticamente
+
+        select.value =
+            resultado.id_veiculo;
+
+
+        // Limpar busca
+
+        document
+            .getElementById("buscaVeiculo")
+            .value =
+            resultado.placa;
+
+
+        // Fechar cadastro
+
+        document
+            .getElementById("cadastroVeiculo")
+            .style.display =
+            "none";
+
+
+        // Limpar campos
+
+        document
+            .getElementById("novoVeiculoPlaca")
+            .value = "";
+
+        document
+            .getElementById("novoVeiculoMarca")
+            .value = "";
+
+        document
+            .getElementById("novoVeiculoModelo")
+            .value = "";
+
+        document
+            .getElementById("novoVeiculoAno")
+            .value = "";
+
+        document
+            .getElementById("novoVeiculoQuilometragem")
+            .value = "";
+
+        erro.style.display = "none";
+
+
+        alert(
+            "Veículo cadastrado e vinculado ao cliente!"
+        );
+
+    } catch (erro) {
+
+        document
+            .getElementById("erroVeiculo")
+            .textContent =
+            "Erro ao cadastrar veículo.";
+
+        document
+            .getElementById("erroVeiculo")
+            .style.display =
+            "block";
+    }
+}
+
+
+// ==================================================
+// FORMATAR TELEFONE
+// ==================================================
+
+function formatarTelefone(campo) {
+
+    let numero =
+        campo.value.replace(/\D/g, "");
+
+
+    if (numero.length > 11) {
+
+        numero =
+            numero.substring(0, 11);
+
+    }
+
+
+    if (numero.length <= 2) {
+
+        campo.value =
+            "(" + numero;
+
+    } else if (numero.length <= 7) {
+
+        campo.value =
+            "(" +
+            numero.substring(0, 2) +
+            ") " +
+            numero.substring(2);
+
+    } else {
+
+        campo.value =
+            "(" +
+            numero.substring(0, 2) +
+            ") " +
+            numero.substring(2, 7) +
+            "-" +
+            numero.substring(7);
+
+    }
+}
+
+
+// ==================================================
+// ADICIONAR PEÇA
+// ==================================================
+
+function adicionarPeca() {
+
+    let tabela =
+        document.querySelector(
+            "#tabelaPecas tbody"
+        );
+
+
+    let linha =
+        document.createElement("tr");
+
+
+    linha.innerHTML = `
+
+        <td>
+
+            <input
+                type="text"
+                name="peca_descricao"
+                placeholder="Nome da peça"
+                class="peca-descricao"
+                required
+            >
+
+        </td>
+
+
+        <td>
+
+            <input
+                type="number"
+                name="peca_quantidade"
+                value="1"
+                min="1"
+                class="peca-quantidade"
+                oninput="calcularTotais()"
+                required
+            >
+
+        </td>
+
+
+        <td>
+
+            <input
+                type="text"
+                name="peca_valor"
+                value="R$ 0,00"
+                class="peca-valor moeda"
+                oninput="calcularTotais()" onblur="formatarCampoMoeda(this); calcularTotais()"
+                required
+            >
+
+        </td>
+
+
+        <td class="peca-total">
+            R$ 0,00
+        </td>
+
+
+        <td>
+
+            <button
+                type="button"
+                class="botao-remover"
+                onclick="
+                    this.closest('tr').remove();
+                    calcularTotais();
+                "
+            >
+                X
+            </button>
+
+        </td>
+
+    `;
+
+
+    tabela.appendChild(linha);
+
+
+    linha
+        .querySelector(".peca-descricao")
+        .focus();
+}
+
+
+// ==================================================
+// ADICIONAR SERVIÇO
+// ==================================================
+
+function adicionarServico() {
+
+    let tabela =
+        document.querySelector(
+            "#tabelaServicos tbody"
+        );
+
+
+    let linha =
+        document.createElement("tr");
+
+
+    linha.innerHTML = `
+
+        <td>
+
+            <input
+                type="text"
+                name="servico_descricao"
+                placeholder="Descrição do serviço"
+                class="servico-descricao"
+                required
+            >
+
+        </td>
+
+
+        <td>
+
+            <input
+                type="text"
+                name="servico_valor"
+                value="R$ 0,00"
+                class="servico-valor moeda"
+                oninput="calcularTotais()" onblur="formatarCampoMoeda(this); calcularTotais()"
+                required
+            >
+
+        </td>
+
+
+        <td>
+
+            <button
+                type="button"
+                class="botao-remover"
+                onclick="
+                    this.closest('tr').remove();
+                    calcularTotais();
+                "
+            >
+                X
+            </button>
+
+        </td>
+
+    `;
+
+
+    tabela.appendChild(linha);
+
+
+    linha
+        .querySelector(".servico-descricao")
+        .focus();
+}
+
+
+// ==================================================
+// CONVERTER MOEDA PARA NÚMERO
+// ==================================================
+
+function valorNumerico(valor) {
+
+    if (!valor) {
+        return 0;
+    }
+
+    valor = valor
+        .toString()
+        .trim()
+        .replace("R$", "")
+        .replace(/\s/g, "");
+
+    // Se tiver vírgula, ela será o separador decimal
+    if (valor.includes(",")) {
+
+        valor = valor
+            .replace(/\./g, "")
+            .replace(",", ".");
+
+    }
+
+    // Se não tiver vírgula, mantém o ponto como decimal
+    return parseFloat(valor) || 0;
+}
+
+
+// ==================================================
+// FORMATAR CAMPO DE MOEDA
+// ==================================================
+
+function formatarCampoMoeda(campo) {
+
+    let valor = campo.value.trim();
+
+    if (valor === "") {
+
+        campo.value = "R$ 0,00";
+
+        return;
+    }
+
+    let numero = valorNumerico(valor);
+
+    campo.value = numero.toLocaleString(
+        "pt-BR",
+        {
+            style: "currency",
+            currency: "BRL"
+        }
+    );
+}
+
+
+// ==================================================
+// FORMATAR MOEDA
+// ==================================================
+
+function formatarMoeda(valor) {
+
+    return valor.toLocaleString(
+        "pt-BR",
+        {
+            style: "currency",
+            currency: "BRL"
+        }
+    );
+}
+
+
+// ==================================================
+// CALCULAR TOTAIS
+// ==================================================
+
+function calcularTotais() {
+
+    let totalPecas = 0;
+
+
+    let pecas =
+        document.querySelectorAll(
+            "#tabelaPecas tbody tr"
+        );
+
+
+    pecas.forEach(
+        function(linha) {
+
+            let quantidade =
+                parseFloat(
+                    linha
+                    .querySelector(
+                        ".peca-quantidade"
+                    )
+                    .value
+                ) || 0;
+
+
+            let valor =
+                valorNumerico(
+                    linha
+                    .querySelector(
+                        ".peca-valor"
+                    )
+                    .value
+                );
+
+
+            let total =
+                quantidade * valor;
+
+
+            linha
+                .querySelector(
+                    ".peca-total"
+                )
+                .textContent =
+                formatarMoeda(total);
+
+
+            totalPecas += total;
+
+        }
+    );
+
+
+    let totalServicos = 0;
+
+
+    let servicos =
+        document.querySelectorAll(
+            "#tabelaServicos tbody tr"
+        );
+
+
+    servicos.forEach(
+        function(linha) {
+
+            let valor =
+                valorNumerico(
+                    linha
+                    .querySelector(
+                        ".servico-valor"
+                    )
+                    .value
+                );
+
+
+            totalServicos += valor;
+
+        }
+    );
+
+
+    let totalOS =
+        totalPecas +
+        totalServicos;
+
+
+    document
+        .getElementById("totalPecas")
+        .textContent =
+        formatarMoeda(totalPecas);
+
+
+    document
+        .getElementById("totalServicos")
+        .textContent =
+        formatarMoeda(totalServicos);
+
+
+    document
+        .getElementById("totalOS")
+        .textContent =
+        formatarMoeda(totalOS);
+}
+
+
+// ==================================================
+// PREPARAR MOEDA ANTES DE SALVAR OS
+// ==================================================
+
+document
+    .getElementById("formOS")
+    .addEventListener(
+        "submit",
+        function() {
+
+            let camposMoeda =
+                document.querySelectorAll(
+                    ".moeda"
+                );
+
+
+            camposMoeda.forEach(
+                function(campo) {
+
+                    let valor =
+                        valorNumerico(
+                            campo.value
+                        );
+
+
+                    campo.value =
+                        valor.toFixed(2);
+
+                }
+            );
+
+        }
+    );
+
+
+// ==================================================
+// INICIALIZAR
+// ==================================================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        // Esconder veículos até escolher cliente
+
+        atualizarVeiculos();
+
+
+        // Formatar moedas existentes
+
+        document
+            .querySelectorAll(".moeda")
+            .forEach(
+                function(campo) {
+
+                    let valor =
+                        valorNumerico(
+                            campo.value
+                        );
+
+
+                    campo.value =
+                        formatarMoeda(valor);
+
+                }
+            );
+
+
+        calcularTotais();
+
+    }
+);
+
+
+</script>
+
+
+</body>
+
+</html>

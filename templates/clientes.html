@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Clientes - New Power Auto Mecânica</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        /* CABEÇALHO */
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h1 {
+            margin: 0 0 6px 0;
+            font-size: 22px;
+            color: #222222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .whatsapp {
+            font-weight: bold;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            font-size: 18px;
+            margin-right: 5px;
+        }
+
+        /* TÍTULO */
+
+        h2 {
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+            margin-top: 10px;
+        }
+
+        /* MENSAGENS */
+
+        .mensagem {
+            padding: 14px 18px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .mensagem-sucesso {
+            background-color: #e8f5e9;
+            border-left: 5px solid #2e7d32;
+            color: #2e7d32;
+        }
+
+        .mensagem-erro {
+            background-color: #ffebee;
+            border-left: 5px solid #d71920;
+            color: #b51218;
+        }
+
+        /* TABELA */
+
+        .tabela-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background-color: #222222;
+            color: white;
+            padding: 11px;
+            text-align: left;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #dddddd;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* AÇÕES */
+
+        .acoes {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .botao-acao {
+            display: inline-block;
+            padding: 7px 10px;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .botao-excluir {
+            background-color: #555555;
+        }
+
+        .botao-excluir:hover {
+            background-color: #333333;
+        }
+
+        /* BOTÕES INFERIORES */
+
+        .botoes {
+            margin-top: 20px;
+        }
+
+        .botao {
+            display: inline-block;
+            padding: 10px 18px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            background-color: #d71920;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .botao:hover {
+            background-color: #b51218;
+        }
+
+        .botao-voltar {
+            background-color: #222222;
+        }
+
+        .botao-voltar:hover {
+            background-color: #444444;
+        }
+
+        /* MENSAGEM VAZIA */
+
+        .vazio {
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #dddddd;
+            margin-top: 20px;
+            color: #666666;
+        }
+
+        @media (max-width: 700px) {
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            table {
+                font-size: 13px;
+            }
+
+            th,
+            td {
+                padding: 7px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+            <p class="whatsapp">
+
+                <span class="icone-whatsapp">●</span>
+
+                (62) 99117-5451
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- TÍTULO -->
+
+    <h2>
+        Clientes Cadastrados
+    </h2>
+
+
+    <!-- MENSAGEM -->
+
+    {% if mensagem %}
+
+        <div
+            class="
+                mensagem
+                {% if tipo_mensagem == 'sucesso' %}
+                    mensagem-sucesso
+                {% else %}
+                    mensagem-erro
+                {% endif %}
+            "
+        >
+
+            {% if tipo_mensagem == 'sucesso' %}
+                ✓
+            {% else %}
+                ⚠
+            {% endif %}
+
+            {{ mensagem }}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- LISTA DE CLIENTES -->
+
+    {% if clientes %}
+
+        <div class="tabela-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Nome</th>
+
+                        <th>Telefone</th>
+
+                        <th>Placa</th>
+
+                        <th>Marca</th>
+
+                        <th>Modelo</th>
+
+                        <th>Ações</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for cliente in clientes %}
+
+                        <tr>
+
+                            <td>
+                                {{ cliente[1] }}
+                            </td>
+
+                            <td>
+                                {{ cliente[2] }}
+                            </td>
+
+                            <td>
+                                {{ cliente[4] or "-" }}
+                            </td>
+
+                            <td>
+                                {{ cliente[5] or "-" }}
+                            </td>
+
+                            <td>
+                                {{ cliente[6] or "-" }}
+                            </td>
+
+                            <td>
+
+                                <div class="acoes">
+
+
+                                    <!-- EXCLUIR CLIENTE -->
+
+                                    <form
+                                        action="/cliente/{{ cliente[0] }}/excluir"
+                                        method="POST"
+                                        style="display: inline;"
+                                        onsubmit="
+                                            return confirm(
+                                                'Tem certeza que deseja excluir o cliente {{ cliente[1] }}?\\n\\nO veículo também será excluído, caso não possua Ordem de Serviço.\\n\\nEsta ação não poderá ser desfeita.'
+                                            );
+                                        "
+                                    >
+
+                                        <button
+                                            type="submit"
+                                            class="botao-acao botao-excluir"
+                                        >
+                                            EXCLUIR CLIENTE
+                                        </button>
+
+                                    </form>
+
+
+                                    <!-- EXCLUIR VEÍCULO -->
+
+                                    {% if cliente[3] %}
+
+                                        <form
+                                            action="/veiculo/{{ cliente[3] }}/excluir"
+                                            method="POST"
+                                            style="display: inline;"
+                                            onsubmit="
+                                                return confirm(
+                                                    'Tem certeza que deseja excluir o veículo {{ cliente[4] }}?\\n\\nEsta ação não poderá ser desfeita.'
+                                                );
+                                            "
+                                        >
+
+                                            <button
+                                                type="submit"
+                                                class="botao-acao botao-excluir"
+                                            >
+                                                EXCLUIR VEÍCULO
+                                            </button>
+
+                                        </form>
+
+                                    {% endif %}
+
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    {% else %}
+
+        <div class="vazio">
+
+            Nenhum cliente cadastrado.
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- BOTÕES -->
+
+    <div class="botoes">
+
+        <a
+            href="/cadastro"
+            class="botao"
+        >
+            Cadastrar Cliente e Veículo
+        </a>
+
+
+        <a
+            href="/os"
+            class="botao"
+        >
+            Nova Ordem de Serviço
+        </a>
+
+
+        <a
+            href="/"
+            class="botao botao-voltar"
+        >
+            Voltar ao Menu Principal
+        </a>
+
+    </div>
+
+
+</div>
+
+</body>
+
+</html>

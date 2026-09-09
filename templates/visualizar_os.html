@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>OS Nº {{ os[0] }}</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        /* CABEÇALHO */
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+        }
+
+        .logo {
+            width: 150px;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h1 {
+            margin: 0 0 6px 0;
+            font-size: 22px;
+            color: #222222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .whatsapp {
+            color: #222222 !important;
+            font-weight: bold;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            font-size: 19px;
+            margin-right: 6px;
+        }
+
+        /* TÍTULO */
+
+        .titulo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .titulo h2 {
+            color: #222222;
+            margin: 0;
+        }
+
+        .numero-os {
+            font-size: 22px;
+            font-weight: bold;
+            color: #d71920;
+        }
+
+        /* DADOS */
+
+        .dados {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .bloco {
+            border: 1px solid #dddddd;
+            padding: 12px;
+            border-radius: 5px;
+        }
+
+        .bloco h3 {
+            margin: 0 0 8px 0;
+            color: #d71920;
+            border-bottom: 1px solid #dddddd;
+            padding-bottom: 5px;
+        }
+
+        .bloco p {
+            margin: 5px 0;
+        }
+
+        /* SEÇÕES */
+
+        .secao {
+            margin-top: 18px;
+        }
+
+        .secao h3 {
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 5px;
+        }
+
+        /* TABELAS */
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #222222;
+            color: white;
+            padding: 9px;
+            text-align: left;
+        }
+
+        td {
+            border: 1px solid #dddddd;
+            padding: 8px;
+        }
+
+        .direita {
+            text-align: right;
+        }
+
+        /* RESUMO */
+
+        .resumo {
+            margin-top: 20px;
+            margin-left: auto;
+            max-width: 400px;
+            padding: 15px;
+            background-color: #eeeeee;
+            border-left: 5px solid #d71920;
+        }
+
+        .linha {
+            display: flex;
+            justify-content: space-between;
+            margin: 7px 0;
+        }
+
+        .total {
+            border-top: 2px solid #222222;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .valor-total {
+            color: #d71920;
+        }
+
+        /* INFORMAÇÃO INTERNA */
+
+        .interno {
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #fff3cd;
+            border: 1px solid #e0c36c;
+            border-radius: 5px;
+        }
+
+        .interno strong {
+            color: #856404;
+        }
+
+        /* BOTÕES */
+
+        .botoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .botao {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+            background-color: #d71920;
+            border-radius: 5px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+
+        .botao-voltar {
+            background-color: #222222;
+        }
+
+        .botao-editar {
+            background-color: #222222;
+        }
+
+        .botao-pdf {
+            background-color: #555555;
+        }
+
+        .botao-whatsapp {
+            background-color: #25D366;
+        }
+
+        .botao-whatsapp:hover {
+            background-color: #1da851;
+        }
+
+        @media (max-width: 700px) {
+
+            .dados {
+                grid-template-columns: 1fr;
+            }
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            .botoes {
+                flex-direction: column;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+            <p class="whatsapp">
+
+                <i class="fa-brands fa-whatsapp icone-whatsapp"></i>
+
+                (62) 99117-5451
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- TÍTULO -->
+
+    <div class="titulo">
+
+        <h2>
+            ORDEM DE SERVIÇO
+        </h2>
+
+        <div class="numero-os">
+            Nº {{ os[0] }}
+        </div>
+
+    </div>
+
+
+    <!-- DADOS CLIENTE / VEÍCULO -->
+
+    <div class="dados">
+
+        <div class="bloco">
+
+            <h3>
+                Cliente
+            </h3>
+
+            <p>
+                <strong>Nome:</strong>
+                {{ os[2] }}
+            </p>
+
+            <p>
+                <strong>Telefone:</strong>
+                {{ os[3] }}
+            </p>
+
+            {% if os[4] %}
+
+            <p>
+                <strong>CPF/CNPJ:</strong>
+                {{ os[4] }}
+            </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <div class="bloco">
+
+            <h3>
+                Veículo
+            </h3>
+
+            <p>
+                <strong>Placa:</strong>
+                {{ os[5] }}
+            </p>
+
+            <p>
+                <strong>Marca:</strong>
+                {{ os[6] }}
+            </p>
+
+            <p>
+                <strong>Modelo:</strong>
+                {{ os[7] }}
+            </p>
+
+            {% if os[8] %}
+
+            <p>
+                <strong>Ano:</strong>
+                {{ os[8] }}
+            </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- DATA -->
+
+    <div class="secao">
+
+        <p>
+            <strong>Data da OS:</strong>
+            {{ os[1][8:10] }}/{{ os[1][5:7] }}/{{ os[1][0:4] }}
+            às {{ os[1][11:16] }}
+        </p>
+
+        <p>
+            <strong>Status:</strong>
+            {{ os[15] }}
+        </p>
+
+
+        <form
+            method="POST"
+            action="/os/{{ os[0] }}/status"
+        >
+
+            <select name="status">
+
+                <option
+                    value="Aberta"
+                    {% if os[15] == "Aberta" %}
+                    selected
+                    {% endif %}
+                >
+                    Aberta
+                </option>
+
+                <option
+                    value="Em andamento"
+                    {% if os[15] == "Em andamento" %}
+                    selected
+                    {% endif %}
+                >
+                    Em andamento
+                </option>
+
+                <option
+                    value="Finalizada"
+                    {% if os[15] == "Finalizada" %}
+                    selected
+                    {% endif %}
+                >
+                    Finalizada
+                </option>
+
+                <option
+                    value="Cancelada"
+                    {% if os[15] == "Cancelada" %}
+                    selected
+                    {% endif %}
+                >
+                    Cancelada
+                </option>
+
+            </select>
+
+            <button type="submit">
+                Atualizar Status
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- PEÇAS -->
+
+    <div class="secao">
+
+        <h3>
+            Peças
+        </h3>
+
+        {% if pecas %}
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Peça
+                    </th>
+
+                    <th>
+                        Quantidade
+                    </th>
+
+                    <th>
+                        Valor unitário
+                    </th>
+
+                    <th>
+                        Total
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for peca in pecas %}
+
+                <tr>
+
+                    <td>
+                        {{ peca[0] }}
+                    </td>
+
+                    <td>
+                        {{ peca[1] }}
+                    </td>
+
+                    <td>
+                        R$ {{ "%.2f"|format(peca[2]) }}
+                    </td>
+
+                    <td>
+                        R$ {{ "%.2f"|format(peca[3]) }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        {% else %}
+
+        <p>
+            Nenhuma peça cadastrada.
+        </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- SERVIÇOS -->
+
+    <div class="secao">
+
+        <h3>
+            Serviços
+        </h3>
+
+        {% if servicos %}
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Serviço
+                    </th>
+
+                    <th>
+                        Valor
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for servico in servicos %}
+
+                <tr>
+
+                    <td>
+                        {{ servico[0] }}
+                    </td>
+
+                    <td>
+                        R$ {{ "%.2f"|format(servico[1]) }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        {% else %}
+
+        <p>
+            Nenhum serviço cadastrado.
+        </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- RESUMO -->
+
+    <div class="resumo">
+
+        <div class="linha">
+
+            <span>
+                Peças:
+            </span>
+
+            <span>
+                R$ {{ "%.2f"|format(os[12]) }}
+            </span>
+
+        </div>
+
+
+        <div class="linha">
+
+            <span>
+                Mão de obra:
+            </span>
+
+            <span>
+                R$ {{ "%.2f"|format(os[11]) }}
+            </span>
+
+        </div>
+
+
+        <div class="linha total">
+
+            <span>
+                TOTAL:
+            </span>
+
+            <span class="valor-total">
+                R$ {{ "%.2f"|format(os[13]) }}
+            </span>
+
+        </div>
+
+
+        <div class="linha">
+
+            <span>
+                Pagamento:
+            </span>
+
+            <span>
+                {{ os[10] }}
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <!-- INFORMAÇÃO INTERNA -->
+
+    {% if os[9] == "Henrique" %}
+
+    <div class="interno">
+
+        <strong>
+            INFORMAÇÃO INTERNA
+        </strong>
+
+        <br><br>
+
+        Responsável:
+        <strong>
+            Henrique
+        </strong>
+
+        <br>
+
+        Repasse de mão de obra:
+        <strong>
+            R$ {{ "%.2f"|format(os[14]) }}
+        </strong>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- BOTÕES -->
+
+    <div class="botoes">
+
+        <a
+            href="/ordens"
+            class="botao botao-voltar"
+        >
+            Voltar para OS
+        </a>
+
+
+        <a
+            href="/os/{{ os[0] }}/editar"
+            class="botao botao-editar"
+        >
+            EDITAR OS
+        </a>
+
+
+        <a
+            href="/os/{{ os[0] }}/pdf"
+            class="botao botao-pdf"
+            target="_blank"
+        >
+            <i class="fa-solid fa-file-pdf"></i>
+            GERAR PDF
+        </a>
+
+
+        <a
+            href="#"
+            class="botao botao-whatsapp"
+            onclick="enviarWhatsApp(); return false;"
+        >
+            <i class="fa-brands fa-whatsapp"></i>
+            ENVIAR WHATSAPP
+        </a>
+
+
+        <a
+            href="/os"
+            class="botao"
+        >
+            + Nova OS
+        </a>
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+    // ========================================================
+    // ENVIAR ORDEM DE SERVIÇO PELO WHATSAPP
+    // ========================================================
+
+    function enviarWhatsApp() {
+
+        const telefoneCliente = {{ os[3] | tojson }};
+
+        const nomeCliente = {{ os[2] | tojson }};
+
+        const numeroOS = {{ os[0] | tojson }};
+
+
+        // Remove tudo que não for número
+
+        let telefone = String(
+            telefoneCliente || ""
+        ).replace(/\D/g, "");
+
+
+        // Verifica se existe telefone
+
+        if (telefone === "") {
+
+            alert(
+                "Este cliente não possui telefone cadastrado."
+            );
+
+            return;
+        }
+
+
+        // Adiciona o código do Brasil se necessário
+
+        if (!telefone.startsWith("55")) {
+
+            telefone = "55" + telefone;
+        }
+
+
+        // Mensagem
+
+        const mensagem =
+            "Olá, " +
+            nomeCliente +
+            "! Segue a sua Ordem de Serviço nº " +
+            numeroOS +
+            " da New Power Auto Mecânica.";
+
+
+        // Monta o endereço do WhatsApp
+
+        const url =
+            "https://wa.me/" +
+            telefone +
+            "?text=" +
+            encodeURIComponent(mensagem);
+
+
+        // Abrir WhatsApp
+
+        window.open(
+            url,
+            "_blank"
+        );
+
+    }
+
+</script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Financeiro - New Power Auto Mecânica</title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            max-width: 1100px;
+
+            margin: 15px auto;
+
+            padding: 10px;
+
+            background-color: #eeeeee;
+        }
+
+
+        .container {
+
+            background-color: white;
+
+            padding: 20px 25px;
+
+            border-radius: 8px;
+        }
+
+
+        /* CABEÇALHO */
+
+        .cabecalho {
+
+            display: flex;
+
+            align-items: center;
+
+            border-bottom: 3px solid #d71920;
+
+            padding-bottom: 12px;
+
+            margin-bottom: 20px;
+        }
+
+
+        .logo {
+
+            width: 150px;
+
+            height: auto;
+
+            margin-right: 25px;
+        }
+
+
+        .dados-oficina {
+
+            flex: 1;
+        }
+
+
+        .dados-oficina h1 {
+
+            margin: 0 0 6px 0;
+
+            font-size: 22px;
+
+            color: #222222;
+        }
+
+
+        .dados-oficina p {
+
+            margin: 4px 0;
+
+            font-size: 14px;
+
+            color: #555555;
+        }
+
+
+        .whatsapp {
+
+            font-weight: bold;
+
+            color: #222222;
+        }
+
+
+        .icone-whatsapp {
+
+            color: #25D366;
+
+            font-size: 18px;
+
+            margin-right: 5px;
+        }
+
+
+        /* TÍTULO */
+
+        h2 {
+
+            color: #222222;
+
+            border-bottom: 2px solid #d71920;
+
+            padding-bottom: 6px;
+
+            margin-top: 10px;
+        }
+
+
+        /* FILTRO */
+
+        .filtro {
+
+            background-color: #f5f5f5;
+
+            border: 1px solid #dddddd;
+
+            border-radius: 6px;
+
+            padding: 18px;
+
+            margin-top: 20px;
+        }
+
+
+        .filtro-titulo {
+
+            font-weight: bold;
+
+            color: #222222;
+
+            margin-bottom: 12px;
+        }
+
+
+        .filtro-form {
+
+            display: flex;
+
+            gap: 12px;
+
+            align-items: end;
+
+            flex-wrap: wrap;
+        }
+
+
+        .campo {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 5px;
+        }
+
+
+        .campo label {
+
+            font-size: 13px;
+
+            font-weight: bold;
+
+            color: #555555;
+        }
+
+
+        .campo input {
+
+            padding: 9px;
+
+            border: 1px solid #cccccc;
+
+            border-radius: 4px;
+
+            font-size: 14px;
+        }
+
+
+        .botao-filtrar {
+
+            padding: 10px 18px;
+
+            background-color: #d71920;
+
+            color: white;
+
+            border: none;
+
+            border-radius: 4px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        .botao-filtrar:hover {
+
+            background-color: #b51218;
+        }
+
+
+        .botao-limpar {
+
+            padding: 10px 18px;
+
+            background-color: #222222;
+
+            color: white;
+
+            text-decoration: none;
+
+            border-radius: 4px;
+
+            font-weight: bold;
+        }
+
+
+        .botao-limpar:hover {
+
+            background-color: #444444;
+        }
+
+
+        /* PERÍODO */
+
+        .periodo {
+
+            margin-top: 20px;
+
+            padding: 10px 12px;
+
+            background-color: #eeeeee;
+
+            border-left: 4px solid #d71920;
+
+            color: #555555;
+
+            font-size: 14px;
+        }
+
+
+        /* CARDS */
+
+        .resumo {
+
+            display: grid;
+
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(200px, 1fr)
+            );
+
+            gap: 15px;
+
+            margin-top: 20px;
+        }
+
+
+        .card {
+
+            border: 1px solid #dddddd;
+
+            border-radius: 6px;
+
+            padding: 18px;
+
+            background-color: white;
+        }
+
+
+        .card-titulo {
+
+            font-size: 13px;
+
+            color: #666666;
+
+            font-weight: bold;
+
+            margin-bottom: 8px;
+        }
+
+
+        .card-valor {
+
+            font-size: 23px;
+
+            font-weight: bold;
+
+            color: #222222;
+        }
+
+
+        .card-destaque {
+
+            border-top: 4px solid #d71920;
+        }
+
+
+        .card-destaque .card-valor {
+
+            color: #d71920;
+        }
+
+
+        .card-repasse {
+
+            border-top: 4px solid #555555;
+        }
+
+
+        .card-resultado {
+
+            border-top: 4px solid #222222;
+        }
+
+
+        /* SEÇÕES */
+
+        .secao {
+
+            margin-top: 30px;
+        }
+
+
+        .secao h3 {
+
+            color: #222222;
+
+            border-bottom: 2px solid #d71920;
+
+            padding-bottom: 6px;
+
+            margin-bottom: 15px;
+        }
+
+
+        /* TABELAS */
+
+        .tabela-container {
+
+            overflow-x: auto;
+        }
+
+
+        table {
+
+            width: 100%;
+
+            border-collapse: collapse;
+        }
+
+
+        th {
+
+            background-color: #222222;
+
+            color: white;
+
+            padding: 10px;
+
+            text-align: left;
+
+            font-size: 14px;
+        }
+
+
+        td {
+
+            padding: 10px;
+
+            border-bottom: 1px solid #dddddd;
+
+            font-size: 14px;
+        }
+
+
+        tr:hover {
+
+            background-color: #f5f5f5;
+        }
+
+
+        .valor {
+
+            font-weight: bold;
+
+            color: #d71920;
+        }
+
+
+        /* BOTÃO VOLTAR */
+
+        .botao-voltar {
+
+            display: block;
+
+            margin-top: 25px;
+
+            padding: 10px;
+
+            text-align: center;
+
+            background-color: #222222;
+
+            color: white;
+
+            text-decoration: none;
+
+            border-radius: 4px;
+
+            font-weight: bold;
+        }
+
+
+        .botao-voltar:hover {
+
+            background-color: #444444;
+        }
+
+
+        @media (max-width: 700px) {
+
+            .cabecalho {
+
+                flex-direction: column;
+
+                text-align: center;
+            }
+
+
+            .logo {
+
+                margin-right: 0;
+
+                margin-bottom: 10px;
+            }
+
+
+            .filtro-form {
+
+                flex-direction: column;
+
+                align-items: stretch;
+            }
+
+
+            .campo input,
+            .botao-filtrar,
+            .botao-limpar {
+
+                width: 100%;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+
+        <div class="dados-oficina">
+
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+
+            <p class="whatsapp">
+
+                <span class="icone-whatsapp">●</span>
+
+                (62) 99117-5451
+
+            </p>
+
+
+        </div>
+
+    </div>
+
+
+    <!-- TÍTULO -->
+
+    <h2>
+        Financeiro
+    </h2>
+
+
+    <!-- FILTRO -->
+
+    <div class="filtro">
+
+
+        <div class="filtro-titulo">
+            Filtrar período
+        </div>
+
+
+        <form
+            action="/financeiro"
+            method="GET"
+            class="filtro-form"
+        >
+
+
+            <div class="campo">
+
+                <label for="data_inicio">
+                    Data inicial
+                </label>
+
+                <input
+                    type="date"
+                    id="data_inicio"
+                    name="data_inicio"
+                    value="{{ data_inicio }}"
+                >
+
+            </div>
+
+
+            <div class="campo">
+
+                <label for="data_fim">
+                    Data final
+                </label>
+
+                <input
+                    type="date"
+                    id="data_fim"
+                    name="data_fim"
+                    value="{{ data_fim }}"
+                >
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="botao-filtrar"
+            >
+                Filtrar
+            </button>
+
+
+            <a
+                href="/financeiro"
+                class="botao-limpar"
+            >
+                Limpar filtro
+            </a>
+
+
+        </form>
+
+    </div>
+
+
+    <!-- PERÍODO -->
+
+    {% if data_inicio or data_fim %}
+
+        <div class="periodo">
+
+            <strong>
+                Período consultado:
+            </strong>
+
+            {{ data_inicio }}
+            até
+            {{ data_fim }}
+
+        </div>
+
+    {% else %}
+
+        <div class="periodo">
+
+            <strong>
+                Período consultado:
+            </strong>
+
+            Todas as OS finalizadas
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- RESUMO -->
+
+    <div class="resumo">
+
+
+        <div class="card">
+
+            <div class="card-titulo">
+                OS Finalizadas
+            </div>
+
+            <div class="card-valor">
+                {{ quantidade_os }}
+            </div>
+
+        </div>
+
+
+        <div class="card card-destaque">
+
+            <div class="card-titulo">
+                Faturamento Total
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(faturamento).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-titulo">
+                Total em Peças
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(total_pecas).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-titulo">
+                Total em Mão de Obra
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(total_mao_obra).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card card-repasse">
+
+            <div class="card-titulo">
+                Repasse Henrique
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(repasse_henrique).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card card-resultado">
+
+            <div class="card-titulo">
+                Resultado da Oficina
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(resultado_oficina).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- FATURAMENTO POR PAGAMENTO -->
+
+    <div class="secao">
+
+        <h3>
+            Faturamento por Forma de Pagamento
+        </h3>
+
+
+        <div class="tabela-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Forma de Pagamento
+                        </th>
+
+                        <th>
+                            Quantidade de OS
+                        </th>
+
+                        <th>
+                            Faturamento
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% if pagamentos %}
+
+                        {% for pagamento in pagamentos %}
+
+                            <tr>
+
+                                <td>
+                                    {{ pagamento[0] or "Não informado" }}
+                                </td>
+
+                                <td>
+                                    {{ pagamento[1] }}
+                                </td>
+
+                                <td class="valor">
+
+                                    R$
+                                    {{ "{:,.2f}".format(pagamento[2]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <tr>
+
+                            <td colspan="3"
+                                style="text-align: center; color: #666666;">
+
+                                Nenhum faturamento encontrado
+                                no período.
+
+                            </td>
+
+                        </tr>
+
+                    {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- FATURAMENTO POR RESPONSÁVEL -->
+
+    <div class="secao">
+
+        <h3>
+            Faturamento por Responsável
+        </h3>
+
+
+        <div class="tabela-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Responsável
+                        </th>
+
+                        <th>
+                            Quantidade de OS
+                        </th>
+
+                        <th>
+                            Faturamento
+                        </th>
+
+                        <th>
+                            Mão de Obra
+                        </th>
+
+                        <th>
+                            Repasse
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% if responsaveis %}
+
+                        {% for responsavel in responsaveis %}
+
+                            <tr>
+
+                                <td>
+                                    {{ responsavel[0] or "Não informado" }}
+                                </td>
+
+                                <td>
+                                    {{ responsavel[1] }}
+                                </td>
+
+                                <td class="valor">
+
+                                    R$
+                                    {{ "{:,.2f}".format(responsavel[2]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+                                </td>
+
+                                <td>
+
+                                    R$
+                                    {{ "{:,.2f}".format(responsavel[3]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+                                </td>
+
+                                <td>
+
+                                    R$
+                                    {{ "{:,.2f}".format(responsavel[4]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <tr>
+
+                            <td colspan="5"
+                                style="text-align: center; color: #666666;">
+
+                                Nenhum faturamento encontrado
+                                no período.
+
+                            </td>
+
+                        </tr>
+
+                    {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- VOLTAR -->
+
+    <a
+        href="/"
+        class="botao-voltar"
+    >
+        Voltar ao Menu Principal
+    </a>
+
+
+</div>
+
+</body>
+
+</html>

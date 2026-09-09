@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Editar OS Nº {{ os[0] }}</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 150px;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h1 {
+            margin: 0 0 6px 0;
+            font-size: 22px;
+            color: #222222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            font-size: 19px;
+            margin-right: 6px;
+        }
+
+        .titulo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .titulo h2 {
+            margin: 0;
+            color: #222222;
+        }
+
+        .numero-os {
+            font-size: 22px;
+            font-weight: bold;
+            color: #d71920;
+        }
+
+        .secao {
+            margin-top: 20px;
+            border: 1px solid #dddddd;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .secao h3 {
+            margin-top: 0;
+            color: #d71920;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333333;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .campo {
+            margin-bottom: 12px;
+        }
+
+        .linha {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 8px;
+            align-items: end;
+            margin-bottom: 8px;
+        }
+
+        .linha-servico {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 8px;
+            align-items: end;
+            margin-bottom: 8px;
+        }
+
+        .botao-pequeno {
+            padding: 9px 12px;
+            background-color: #d71920;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .botao-remover {
+            padding: 9px 12px;
+            background-color: #222222;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .totais {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #eeeeee;
+            border-left: 5px solid #d71920;
+        }
+
+        .total-linha {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+        }
+
+        .total-final {
+            border-top: 2px solid #222222;
+            padding-top: 10px;
+            margin-top: 10px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .botoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .botao {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+            background-color: #d71920;
+            border-radius: 5px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+
+        .botao-voltar {
+            background-color: #222222;
+        }
+
+        .mensagem {
+            background-color: #dff0d8;
+            border: 1px solid #b7d7a8;
+            color: #31572c;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 700px) {
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            .linha,
+            .linha-servico {
+                grid-template-columns: 1fr;
+            }
+
+            .botoes {
+                flex-direction: column;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+            <p>
+
+                <i class="fa-brands fa-whatsapp icone-whatsapp"></i>
+
+                (62) 99117-5451
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- TÍTULO -->
+
+    <div class="titulo">
+
+        <h2>
+            EDITAR ORDEM DE SERVIÇO
+        </h2>
+
+        <div class="numero-os">
+            Nº {{ os[0] }}
+        </div>
+
+    </div>
+
+
+    <!-- FORMULÁRIO PRINCIPAL -->
+
+    <form
+        method="POST"
+        action="/os/{{ os[0] }}/editar"
+        onsubmit="prepararValores()"
+    >
+
+
+        <!-- CLIENTE -->
+
+        <div class="secao">
+
+            <h3>
+                Cliente e Veículo
+            </h3>
+
+            <div class="campo">
+
+                <label>
+                    Cliente
+                </label>
+
+                <select
+                    name="cliente"
+                    id="cliente"
+                    onchange="atualizarVeiculos()"
+                    required
+                >
+
+                    <option value="">
+                        Selecione o cliente
+                    </option>
+
+                    {% for cliente in clientes %}
+
+                    <option
+                        value="{{ cliente[0] }}"
+                        {% if cliente[0] == os[1] %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {{ cliente[1] }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="campo">
+
+                <label>
+                    Veículo
+                </label>
+
+                <select
+                    name="veiculo"
+                    id="veiculo"
+                    required
+                >
+
+                    <option value="">
+                        Selecione o veículo
+                    </option>
+
+                    {% for veiculo in veiculos %}
+
+                    <option
+                        value="{{ veiculo[0] }}"
+                        data-cliente="{{ veiculo[4] }}"
+                        {% if veiculo[0] == os[2] %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {{ veiculo[1] }}
+                        -
+                        {{ veiculo[2] }}
+                        {{ veiculo[3] }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <!-- PEÇAS -->
+
+        <div class="secao">
+
+            <h3>
+                Peças
+            </h3>
+
+            <div id="pecas">
+
+                {% if pecas %}
+
+                    {% for peca in pecas %}
+
+                    <div class="linha">
+
+                        <div>
+
+                            <label>
+                                Peça
+                            </label>
+
+                            <input
+                                type="text"
+                                name="peca_descricao"
+                                value="{{ peca[0] }}"
+                            >
+
+                        </div>
+
+                        <div>
+
+                            <label>
+                                Quantidade
+                            </label>
+
+                            <input
+                                type="number"
+                                name="peca_quantidade"
+                                value="{{ peca[1] }}"
+                                min="1"
+                                step="1"
+                                oninput="calcularTotais()"
+                            >
+
+                        </div>
+
+                        <div>
+
+                            <label>
+                                Valor unitário
+                            </label>
+
+                            <input
+                                type="text"
+                                class="moeda"
+                                name="peca_valor"
+                                value="{{ '%.2f'|format(peca[2]) }}"
+                                oninput="formatarMoeda(this); calcularTotais()"
+                            >
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="botao-remover"
+                            onclick="removerLinha(this)"
+                        >
+                            REMOVER
+                        </button>
+
+                    </div>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <div class="linha">
+
+                        <div>
+
+                            <label>
+                                Peça
+                            </label>
+
+                            <input
+                                type="text"
+                                name="peca_descricao"
+                            >
+
+                        </div>
+
+                        <div>
+
+                            <label>
+                                Quantidade
+                            </label>
+
+                            <input
+                                type="number"
+                                name="peca_quantidade"
+                                value="1"
+                                min="1"
+                                step="1"
+                            >
+
+                        </div>
+
+                        <div>
+
+                            <label>
+                                Valor unitário
+                            </label>
+
+                            <input
+                                type="text"
+                                class="moeda"
+                                name="peca_valor"
+                                value="0,00"
+                            >
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="botao-remover"
+                            onclick="removerLinha(this)"
+                        >
+                            REMOVER
+                        </button>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <button
+                type="button"
+                class="botao-pequeno"
+                onclick="adicionarPeca()"
+            >
+                + Adicionar Peça
+            </button>
+
+        </div>
+
+
+        <!-- SERVIÇOS -->
+
+        <div class="secao">
+
+            <h3>
+                Serviços
+            </h3>
+
+            <div id="servicos">
+
+                {% if servicos %}
+
+                    {% for servico in servicos %}
+
+                    <div class="linha-servico">
+
+                        <div>
+
+                            <label>
+                                Serviço
+                            </label>
+
+                            <input
+                                type="text"
+                                name="servico_descricao"
+                                value="{{ servico[0] }}"
+                            >
+
+                        </div>
+
+                        <div>
+
+                            <label>
+                                Valor
+                            </label>
+
+                            <input
+                                type="text"
+                                class="moeda"
+                                name="servico_valor"
+                                value="{{ '%.2f'|format(servico[1]) }}"
+                                oninput="formatarMoeda(this); calcularTotais()"
+                            >
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="botao-remover"
+                            onclick="removerLinha(this)"
+                        >
+                            REMOVER
+                        </button>
+
+                    </div>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    <div class="linha-servico">
+
+                        <div>
+
+                            <label>
+                                Serviço
+                            </label>
+
+                            <input
+                                type="text"
+                                name="servico_descricao"
+                            >
+
+                        </div>
+
+                        <div>
+
+                            <label>
+                                Valor
+                            </label>
+
+                            <input
+                                type="text"
+                                class="moeda"
+                                name="servico_valor"
+                                value="0,00"
+                            >
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="botao-remover"
+                            onclick="removerLinha(this)"
+                        >
+                            REMOVER
+                        </button>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+            <button
+                type="button"
+                class="botao-pequeno"
+                onclick="adicionarServico()"
+            >
+                + Adicionar Serviço
+            </button>
+
+        </div>
+
+
+        <!-- RESPONSÁVEL / PAGAMENTO / STATUS -->
+
+        <div class="secao">
+
+            <h3>
+                Informações da OS
+            </h3>
+
+            <div class="campo">
+
+                <label>
+                    Responsável
+                </label>
+
+                <select
+                    name="responsavel"
+                    required
+                >
+
+                    <option
+                        value="Leonardo"
+                        {% if os[4] == "Leonardo" %}
+                            selected
+                        {% endif %}
+                    >
+                        Leonardo
+                    </option>
+
+                    <option
+                        value="Henrique"
+                        {% if os[4] == "Henrique" %}
+                            selected
+                        {% endif %}
+                    >
+                        Henrique
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="campo">
+
+                <label>
+                    Forma de pagamento
+                </label>
+
+                <select
+                    name="pagamento"
+                    required
+                >
+
+                    <option
+                        value="Pix"
+                        {% if os[5] == "Pix" %}
+                            selected
+                        {% endif %}
+                    >
+                        Pix
+                    </option>
+
+                    <option
+                        value="Dinheiro"
+                        {% if os[5] == "Dinheiro" %}
+                            selected
+                        {% endif %}
+                    >
+                        Dinheiro
+                    </option>
+
+                    <option
+                        value="Cartão"
+                        {% if os[5] == "Cartão" %}
+                            selected
+                        {% endif %}
+                    >
+                        Cartão
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="campo">
+
+                <label>
+                    Status
+                </label>
+
+                <select
+                    name="status"
+                    required
+                >
+
+                    <option
+                        value="Aberta"
+                        {% if os[6] == "Aberta" %}
+                            selected
+                        {% endif %}
+                    >
+                        Aberta
+                    </option>
+
+                    <option
+                        value="Em andamento"
+                        {% if os[6] == "Em andamento" %}
+                            selected
+                        {% endif %}
+                    >
+                        Em andamento
+                    </option>
+
+                    <option
+                        value="Finalizada"
+                        {% if os[6] == "Finalizada" %}
+                            selected
+                        {% endif %}
+                    >
+                        Finalizada
+                    </option>
+
+                    <option
+                        value="Cancelada"
+                        {% if os[6] == "Cancelada" %}
+                            selected
+                        {% endif %}
+                    >
+                        Cancelada
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <!-- TOTAIS -->
+
+        <div class="totais">
+
+            <div class="total-linha">
+
+                <span>
+                    Total em peças:
+                </span>
+
+                <strong id="totalPecas">
+                    R$ 0,00
+                </strong>
+
+            </div>
+
+
+            <div class="total-linha">
+
+                <span>
+                    Total mão de obra:
+                </span>
+
+                <strong id="totalServicos">
+                    R$ 0,00
+                </strong>
+
+            </div>
+
+
+            <div class="total-linha total-final">
+
+                <span>
+                    TOTAL DA OS:
+                </span>
+
+                <strong id="totalGeral">
+                    R$ 0,00
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <!-- BOTÕES -->
+
+        <div class="botoes">
+
+            <a
+                href="/os/{{ os[0] }}"
+                class="botao botao-voltar"
+            >
+                CANCELAR
+            </a>
+
+            <button
+                type="submit"
+                class="botao"
+            >
+                SALVAR ALTERAÇÕES
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script>
+
+function converterParaNumero(valor) {
+
+    if (!valor) {
+        return 0;
+    }
+
+    valor = valor
+        .replace("R$", "")
+        .replace(/\s/g, "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+
+    return parseFloat(valor) || 0;
+}
+
+
+function formatarMoeda(campo) {
+
+    let valor = campo.value;
+
+    valor = valor.replace(/\D/g, "");
+
+    if (valor === "") {
+        valor = "0";
+    }
+
+    valor = (parseInt(valor, 10) / 100).toFixed(2);
+
+    campo.value = valor
+        .replace(".", ",");
+}
+
+
+function prepararValores() {
+
+    document
+        .querySelectorAll(".moeda")
+        .forEach(function(campo) {
+
+            let numero = converterParaNumero(
+                campo.value
+            );
+
+            campo.value = numero.toFixed(2);
+
+        });
+
+}
+
+
+function calcularTotais() {
+
+    let totalPecas = 0;
+    let totalServicos = 0;
+
+    document
+        .querySelectorAll(
+            'input[name="peca_quantidade"]'
+        )
+        .forEach(function(campo, indice) {
+
+            let quantidades =
+                document.querySelectorAll(
+                    'input[name="peca_quantidade"]'
+                );
+
+            let valores =
+                document.querySelectorAll(
+                    'input[name="peca_valor"]'
+                );
+
+            let quantidade =
+                parseFloat(
+                    quantidades[indice].value
+                ) || 0;
+
+            let valor =
+                converterParaNumero(
+                    valores[indice].value
+                );
+
+            totalPecas +=
+                quantidade * valor;
+
+        });
+
+
+    document
+        .querySelectorAll(
+            'input[name="servico_valor"]'
+        )
+        .forEach(function(campo) {
+
+            totalServicos +=
+                converterParaNumero(
+                    campo.value
+                );
+
+        });
+
+
+    document.getElementById(
+        "totalPecas"
+    ).innerText =
+        "R$ " +
+        totalPecas.toFixed(2)
+            .replace(".", ",");
+
+
+    document.getElementById(
+        "totalServicos"
+    ).innerText =
+        "R$ " +
+        totalServicos.toFixed(2)
+            .replace(".", ",");
+
+
+    document.getElementById(
+        "totalGeral"
+    ).innerText =
+        "R$ " +
+        (totalPecas + totalServicos)
+            .toFixed(2)
+            .replace(".", ",");
+
+}
+
+
+function adicionarPeca() {
+
+    const container =
+        document.getElementById(
+            "pecas"
+        );
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className = "linha";
+
+    div.innerHTML = `
+
+        <div>
+
+            <label>
+                Peça
+            </label>
+
+            <input
+                type="text"
+                name="peca_descricao"
+            >
+
+        </div>
+
+        <div>
+
+            <label>
+                Quantidade
+            </label>
+
+            <input
+                type="number"
+                name="peca_quantidade"
+                value="1"
+                min="1"
+                step="1"
+                oninput="calcularTotais()"
+            >
+
+        </div>
+
+        <div>
+
+            <label>
+                Valor unitário
+            </label>
+
+            <input
+                type="text"
+                class="moeda"
+                name="peca_valor"
+                value="0,00"
+                oninput="formatarMoeda(this); calcularTotais()"
+            >
+
+        </div>
+
+        <button
+            type="button"
+            class="botao-remover"
+            onclick="removerLinha(this)"
+        >
+            REMOVER
+        </button>
+
+    `;
+
+    container.appendChild(div);
+
+}
+
+
+function adicionarServico() {
+
+    const container =
+        document.getElementById(
+            "servicos"
+        );
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "linha-servico";
+
+    div.innerHTML = `
+
+        <div>
+
+            <label>
+                Serviço
+            </label>
+
+            <input
+                type="text"
+                name="servico_descricao"
+            >
+
+        </div>
+
+        <div>
+
+            <label>
+                Valor
+            </label>
+
+            <input
+                type="text"
+                class="moeda"
+                name="servico_valor"
+                value="0,00"
+                oninput="formatarMoeda(this); calcularTotais()"
+            >
+
+        </div>
+
+        <button
+            type="button"
+            class="botao-remover"
+            onclick="removerLinha(this)"
+        >
+            REMOVER
+        </button>
+
+    `;
+
+    container.appendChild(div);
+
+}
+
+
+function removerLinha(botao) {
+
+    const linha =
+        botao.parentElement;
+
+    linha.remove();
+
+    calcularTotais();
+
+}
+
+
+function atualizarVeiculos() {
+
+    const cliente =
+        document.getElementById(
+            "cliente"
+        ).value;
+
+    const veiculos =
+        document.querySelectorAll(
+            "#veiculo option"
+        );
+
+    veiculos.forEach(
+        function(opcao) {
+
+            if (opcao.value === "") {
+                opcao.style.display = "";
+                return;
+            }
+
+            if (
+                opcao.dataset.cliente ===
+                cliente
+            ) {
+
+                opcao.style.display = "";
+
+            } else {
+
+                opcao.style.display = "none";
+
+            }
+
+        }
+    );
+
+}
+
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        document
+            .querySelectorAll(".moeda")
+            .forEach(function(campo) {
+
+                let valor =
+                    converterParaNumero(
+                        campo.value
+                    );
+
+                campo.value =
+                    valor.toFixed(2)
+                        .replace(".", ",");
+
+            });
+
+        atualizarVeiculos();
+
+        calcularTotais();
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

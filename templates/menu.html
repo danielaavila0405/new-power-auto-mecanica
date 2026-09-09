@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>New Power Auto Mecânica - Menu Principal</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #eeeeee;
+            color: #222;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 30px auto;
+        }
+
+        .cabecalho {
+            background: #ffffff;
+            padding: 22px 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.08);
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #d71920;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h1 {
+            margin: 0 0 6px 0;
+            font-size: 26px;
+            color: #222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .whatsapp {
+            font-weight: bold;
+            color: #222;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            margin-right: 5px;
+        }
+
+        .usuario-logado {
+            text-align: right;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .usuario-logado strong {
+            color: #222;
+        }
+
+        .topo-titulo {
+            background: #ffffff;
+            padding: 22px 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.08);
+            margin-bottom: 20px;
+        }
+
+        .topo-titulo h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #222;
+        }
+
+        .topo-titulo p {
+            margin: 7px 0 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,.08);
+            padding: 24px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .icone {
+            font-size: 30px;
+            color: #d71920;
+            margin-bottom: 15px;
+        }
+
+        .card h3 {
+            margin: 0 0 8px;
+            font-size: 19px;
+            color: #222;
+        }
+
+        .card p {
+            margin: 0 0 18px;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .botao {
+            display: inline-block;
+            width: 100%;
+            padding: 11px;
+            text-align: center;
+            background: #222;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: .2s;
+        }
+
+        .botao:hover {
+            background: #d71920;
+        }
+
+        .botao-destaque {
+            background: #d71920;
+        }
+
+        .botao-destaque:hover {
+            background: #b51218;
+        }
+
+        .rodape {
+            margin-top: 22px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .rodape a {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .senha {
+            background: #555;
+            color: #fff;
+        }
+
+        .sair {
+            background: #111;
+            color: #fff;
+        }
+
+        .senha:hover,
+        .sair:hover {
+            background: #d71920;
+        }
+
+        @media (max-width: 850px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 12px;
+            }
+
+            .usuario-logado {
+                margin-top: 12px;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 550px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 - Vila Rezende - Goiânia/GO
+            </p>
+
+            <p class="whatsapp">
+                <span class="icone-whatsapp">●</span>
+                (62) 99117-5451
+            </p>
+
+        </div>
+
+        <div class="usuario-logado">
+
+            Usuário conectado:<br>
+
+            <strong>
+                {{ session["nome_usuario"] }}
+            </strong>
+
+            <br>
+
+            Perfil:
+            <strong>
+                {{ session["perfil"] }}
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <!-- TÍTULO -->
+
+    <div class="topo-titulo">
+
+        <h2>
+            Menu Principal
+        </h2>
+
+        <p>
+            Selecione uma opção para continuar.
+        </p>
+
+    </div>
+
+
+    <!-- MENU -->
+
+    <div class="grid">
+
+
+        <!-- NOVA OS -->
+
+        <div class="card">
+
+            <div>
+
+                <div class="icone">
+                    <i class="fa-solid fa-file-circle-plus"></i>
+                </div>
+
+                <h3>
+                    Nova Ordem de Serviço
+                </h3>
+
+                <p>
+                    Cadastre uma nova ordem de serviço para o cliente e veículo.
+                </p>
+
+            </div>
+
+            <a
+                href="/os"
+                class="botao botao-destaque"
+            >
+                NOVA OS
+            </a>
+
+        </div>
+
+
+        <!-- CLIENTES -->
+
+        <div class="card">
+
+            <div>
+
+                <div class="icone">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+
+                <h3>
+                    Clientes
+                </h3>
+
+                <p>
+                    Consulte, cadastre e gerencie os clientes da oficina.
+                </p>
+
+            </div>
+
+            <a
+                href="/clientes"
+                class="botao"
+            >
+                CLIENTES
+            </a>
+
+        </div>
+
+
+        <!-- ORDENS -->
+
+        <div class="card">
+
+            <div>
+
+                <div class="icone">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+
+                <h3>
+                    Ordens de Serviço
+                </h3>
+
+                <p>
+                    Consulte, pesquise e acompanhe as ordens cadastradas.
+                </p>
+
+            </div>
+
+            <a
+                href="/ordens"
+                class="botao"
+            >
+                VER ORDENS
+            </a>
+
+        </div>
+
+
+        <!-- HISTÓRICO -->
+
+        <div class="card">
+
+            <div>
+
+                <div class="icone">
+                    <i class="fa-solid fa-car"></i>
+                </div>
+
+                <h3>
+                    Histórico de Veículos
+                </h3>
+
+                <p>
+                    Consulte todo o histórico de serviços de um veículo.
+                </p>
+
+            </div>
+
+            <a
+                href="/historico"
+                class="botao"
+            >
+                HISTÓRICO
+            </a>
+
+        </div>
+
+
+        <!-- FINANCEIRO -->
+
+        <div class="card">
+
+            <div>
+
+                <div class="icone">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+
+                <h3>
+                    Financeiro
+                </h3>
+
+                <p>
+                    Consulte faturamento, mão de obra, peças e repasses.
+                </p>
+
+            </div>
+
+            <a
+                href="/financeiro"
+                class="botao"
+            >
+                FINANCEIRO
+            </a>
+
+        </div>
+
+
+        <!-- DASHBOARD -->
+
+        <div class="card">
+
+            <div>
+
+                <div class="icone">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+
+                <h3>
+                    Dashboard
+                </h3>
+
+                <p>
+                    Visualize os principais indicadores da oficina.
+                </p>
+
+            </div>
+
+            <a
+                href="/dashboard"
+                class="botao"
+            >
+                DASHBOARD
+            </a>
+
+        </div>
+
+
+        <!-- USUÁRIOS -->
+
+        {% if session["perfil"] == "admin" %}
+
+        <div class="card">
+
+            <div>
+
+                <div class="icone">
+                    <i class="fa-solid fa-user-gear"></i>
+                </div>
+
+                <h3>
+                    Usuários
+                </h3>
+
+                <p>
+                    Cadastre usuários e redefina senhas do sistema.
+                </p>
+
+            </div>
+
+            <a
+                href="/usuarios"
+                class="botao"
+            >
+                GERENCIAR USUÁRIOS
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- RODAPÉ -->
+
+    <div class="rodape">
+
+        <a
+            href="/alterar-senha"
+            class="senha"
+        >
+            ALTERAR MINHA SENHA
+        </a>
+
+        <a
+            href="/logout"
+            class="sair"
+        >
+            SAIR DO SISTEMA
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Histórico de Veículos</title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 150px;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h1 {
+            margin: 0 0 6px 0;
+            font-size: 22px;
+            color: #222222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            font-size: 19px;
+            margin-right: 6px;
+        }
+
+        h2 {
+            color: #222222;
+            margin-bottom: 20px;
+        }
+
+        .busca {
+            padding: 15px;
+            background-color: #eeeeee;
+            border-left: 5px solid #d71920;
+            margin-bottom: 20px;
+        }
+
+        .busca label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .busca-linha {
+            display: flex;
+            gap: 10px;
+        }
+
+        .busca select {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #cccccc;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+
+        .botao {
+            display: inline-block;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 4px;
+            background-color: #d71920;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .botao-preto {
+            background-color: #222222;
+        }
+
+        .veiculo {
+            border: 1px solid #dddddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .veiculo h3 {
+            color: #d71920;
+            margin-top: 0;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+        }
+
+        .dados-veiculo {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .dado {
+            padding: 8px;
+        }
+
+        .historico h3 {
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #222222;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        td {
+            border: 1px solid #dddddd;
+            padding: 9px;
+        }
+
+        .direita {
+            text-align: right;
+        }
+
+        .botao-tabela {
+            display: inline-block;
+            padding: 7px 10px;
+            background-color: #d71920;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .mensagem {
+            padding: 15px;
+            background-color: #fff3cd;
+            border: 1px solid #e0c36c;
+            color: #856404;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .botoes-final {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        @media (max-width: 700px) {
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            .busca-linha {
+                flex-direction: column;
+            }
+
+            .dados-veiculo {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 13px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+            <p>
+
+                <i class="fa-brands fa-whatsapp icone-whatsapp"></i>
+
+                (62) 99117-5451
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <h2>
+        Histórico de Veículos
+    </h2>
+
+
+    <!-- BUSCA -->
+
+    <div class="busca">
+
+        <form
+            method="GET"
+            action="/historico"
+        >
+
+            <label>
+                Selecione o veículo pela placa
+            </label>
+
+            <div class="busca-linha">
+
+                <select
+                    name="placa"
+                    required
+                >
+
+                    <option value="">
+                        Selecione a placa
+                    </option>
+
+                    {% for veiculo_item in veiculos %}
+
+                    <option
+                        value="{{ veiculo_item[1] }}"
+                        {% if placa == veiculo_item[1] %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {{ veiculo_item[1] }}
+                        -
+                        {{ veiculo_item[2] }}
+                        {{ veiculo_item[3] }}
+
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+                <button
+                    type="submit"
+                    class="botao"
+                >
+                    CONSULTAR HISTÓRICO
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+    {% if placa and not veiculo %}
+
+        <div class="mensagem">
+
+            Nenhum veículo encontrado para a placa
+            <strong>{{ placa }}</strong>.
+
+        </div>
+
+    {% endif %}
+
+
+    {% if veiculo %}
+
+        <!-- DADOS DO VEÍCULO -->
+
+        <div class="veiculo">
+
+            <h3>
+                Dados do Veículo
+            </h3>
+
+            <div class="dados-veiculo">
+
+                <div class="dado">
+
+                    <strong>
+                        Placa:
+                    </strong>
+
+                    {{ veiculo[1] }}
+
+                </div>
+
+                <div class="dado">
+
+                    <strong>
+                        Marca:
+                    </strong>
+
+                    {{ veiculo[2] }}
+
+                </div>
+
+                <div class="dado">
+
+                    <strong>
+                        Modelo:
+                    </strong>
+
+                    {{ veiculo[3] }}
+
+                </div>
+
+                <div class="dado">
+
+                    <strong>
+                        Ano:
+                    </strong>
+
+                    {{ veiculo[4] or "-" }}
+
+                </div>
+
+                <div class="dado">
+
+                    <strong>
+                        Cliente:
+                    </strong>
+
+                    {{ veiculo[5] }}
+
+                </div>
+
+                <div class="dado">
+
+                    <strong>
+                        Telefone:
+                    </strong>
+
+                    {{ veiculo[6] }}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- HISTÓRICO -->
+
+        <div class="historico">
+
+            <h3>
+                Histórico de Ordens de Serviço
+            </h3>
+
+            {% if historico_os %}
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            OS
+                        </th>
+
+                        <th>
+                            Data
+                        </th>
+
+                        <th>
+                            Peças
+                        </th>
+
+                        <th>
+                            Mão de obra
+                        </th>
+
+                        <th>
+                            Total
+                        </th>
+
+                        <th>
+                            Pagamento
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th>
+                            Ação
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for os in historico_os %}
+
+                    <tr>
+
+                        <td>
+                            Nº {{ os[0] }}
+                        </td>
+
+                        <td>
+
+                            {{ os[1][8:10] }}/
+                            {{ os[1][5:7] }}/
+                            {{ os[1][0:4] }}
+
+                        </td>
+
+                        <td class="direita">
+
+                            R$
+                            {{ "%.2f"|format(os[2]) }}
+
+                        </td>
+
+                        <td class="direita">
+
+                            R$
+                            {{ "%.2f"|format(os[3]) }}
+
+                        </td>
+
+                        <td class="direita">
+
+                            <strong>
+
+                                R$
+                                {{ "%.2f"|format(os[4]) }}
+
+                            </strong>
+
+                        </td>
+
+                        <td>
+                            {{ os[5] }}
+                        </td>
+
+                        <td>
+                            {{ os[7] }}
+                        </td>
+
+                        <td>
+
+                            <a
+                                href="/os/{{ os[0] }}"
+                                class="botao-tabela"
+                            >
+                                VER OS
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <div class="mensagem">
+
+                    Este veículo ainda não possui
+                    nenhuma Ordem de Serviço.
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- BOTÕES -->
+
+    <div class="botoes-final">
+
+        <a
+            href="/"
+            class="botao botao-preto"
+        >
+            Voltar ao Menu Principal
+        </a>
+
+        <a
+            href="/ordens"
+            class="botao"
+        >
+            Ver Ordens de Serviço
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

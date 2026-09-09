@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard - New Power Auto Mecânica</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+        }
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-right: 25px;
+        }
+
+        .dados-oficina {
+            flex: 1;
+        }
+
+        .dados-oficina h1 {
+            margin: 0 0 6px 0;
+            font-size: 22px;
+            color: #222222;
+        }
+
+        .dados-oficina p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #555555;
+        }
+
+        .whatsapp {
+            font-weight: bold;
+            color: #222222;
+        }
+
+        .icone-whatsapp {
+            color: #25D366;
+            font-size: 18px;
+            margin-right: 5px;
+        }
+
+        h2 {
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+            margin-top: 10px;
+        }
+
+        .subtitulo {
+            color: #666666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .resumo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .card {
+            border: 1px solid #dddddd;
+            border-radius: 6px;
+            padding: 18px;
+            background-color: white;
+        }
+
+        .card-titulo {
+            font-size: 13px;
+            color: #666666;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .card-valor {
+            font-size: 23px;
+            font-weight: bold;
+            color: #222222;
+        }
+
+        .card-destaque {
+            border-top: 4px solid #d71920;
+        }
+
+        .card-destaque .card-valor {
+            color: #d71920;
+        }
+
+        .card-repasse {
+            border-top: 4px solid #555555;
+        }
+
+        .card-resultado {
+            border-top: 4px solid #222222;
+        }
+
+        .secao {
+            margin-top: 30px;
+        }
+
+        .graficos-duplos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .grafico {
+            border: 1px solid #dddddd;
+            border-radius: 6px;
+            padding: 18px;
+            background-color: white;
+        }
+
+        .grafico h3 {
+            margin-top: 0;
+            font-size: 17px;
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+        }
+
+        .grafico-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .grafico-largo {
+            position: relative;
+            height: 350px;
+        }
+
+        .informacao {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-left: 4px solid #d71920;
+            color: #555555;
+            font-size: 14px;
+        }
+
+        .botoes {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .botao {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            text-align: center;
+            background-color: #222222;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .botao:hover {
+            background-color: #444444;
+        }
+
+        .botao-financeiro {
+            background-color: #d71920;
+        }
+
+        .botao-financeiro:hover {
+            background-color: #b51218;
+        }
+
+        @media (max-width: 700px) {
+
+            .cabecalho {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+
+            .graficos-duplos {
+                grid-template-columns: 1fr;
+            }
+
+            .botoes {
+                flex-direction: column;
+            }
+
+            .botao {
+                width: 100%;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+
+    <div class="cabecalho">
+
+        <img
+            src="{{ url_for('static', filename='logo.jpg') }}"
+            class="logo"
+            alt="New Power Auto Mecânica"
+        >
+
+        <div class="dados-oficina">
+
+            <h1>
+                New Power Auto Mecânica
+            </h1>
+
+            <p>
+                Rua V-3, Qd. V3, Lt. 18 -
+                Vila Rezende - Goiânia/GO
+            </p>
+
+            <p class="whatsapp">
+
+                <span class="icone-whatsapp">
+                    ●
+                </span>
+
+                (62) 99117-5451
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- TÍTULO -->
+
+    <h2>
+        Dashboard
+    </h2>
+
+    <div class="subtitulo">
+
+        Visão geral das Ordens de Serviço finalizadas
+
+    </div>
+
+
+    <!-- CARDS -->
+
+    <div class="resumo">
+
+        <div class="card">
+
+            <div class="card-titulo">
+                OS Finalizadas
+            </div>
+
+            <div class="card-valor">
+                {{ quantidade_os }}
+            </div>
+
+        </div>
+
+
+        <div class="card card-destaque">
+
+            <div class="card-titulo">
+                Faturamento Total
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(faturamento)
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-titulo">
+                Total em Peças
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(total_pecas)
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-titulo">
+                Total em Mão de Obra
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(total_mao_obra)
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card card-repasse">
+
+            <div class="card-titulo">
+                Repasse Henrique
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(repasse_henrique)
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card card-resultado">
+
+            <div class="card-titulo">
+                Resultado da Oficina
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(resultado_oficina)
+                    .replace(",", "X")
+                    .replace(".", ",")
+                    .replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- GRÁFICOS -->
+
+    <div class="secao">
+
+        <div class="graficos-duplos">
+
+
+            <!-- PAGAMENTO -->
+
+            <div class="grafico">
+
+                <h3>
+                    Faturamento por Forma de Pagamento
+                </h3>
+
+                <div class="grafico-container">
+
+                    <canvas id="graficoPagamento"></canvas>
+
+                </div>
+
+            </div>
+
+
+            <!-- RESPONSÁVEL -->
+
+            <div class="grafico">
+
+                <h3>
+                    Faturamento por Responsável
+                </h3>
+
+                <div class="grafico-container">
+
+                    <canvas id="graficoResponsavel"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- EVOLUÇÃO -->
+
+    <div class="secao">
+
+        <div class="grafico">
+
+            <h3>
+                Evolução do Faturamento
+            </h3>
+
+            <div class="grafico-largo">
+
+                <canvas id="graficoMensal"></canvas>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- INFORMAÇÃO -->
+
+    <div class="informacao">
+
+        Os indicadores e gráficos consideram somente as
+        Ordens de Serviço com status
+        <strong>Finalizada</strong>.
+
+    </div>
+
+
+    <!-- BOTÕES -->
+
+    <div class="botoes">
+
+        <a
+            href="/financeiro"
+            class="botao botao-financeiro"
+        >
+            Ver Financeiro Detalhado
+        </a>
+
+
+        <a
+            href="/ordens"
+            class="botao"
+        >
+            Ver Ordens de Serviço
+        </a>
+
+
+        <a
+            href="/"
+            class="botao"
+        >
+            Voltar ao Menu Principal
+        </a>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    // ========================================================
+    // DADOS VINDOS DO FLASK
+    // ========================================================
+
+    const pagamentos = {{ pagamentos | tojson }};
+
+    const responsaveis = {{ responsaveis | tojson }};
+
+    const faturamentoMensal = {{ faturamento_mensal | tojson }};
+
+
+    // ========================================================
+    // FATURAMENTO POR FORMA DE PAGAMENTO
+    // ========================================================
+
+    const nomesPagamento = pagamentos.map(
+        item => item[0]
+    );
+
+    const valoresPagamento = pagamentos.map(
+        item => item[1]
+    );
+
+
+    new Chart(
+        document.getElementById("graficoPagamento"),
+        {
+            type: "doughnut",
+
+            data: {
+                labels: nomesPagamento,
+
+                datasets: [
+                    {
+                        data: valoresPagamento
+                    }
+                ]
+            },
+
+            options: {
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+                    legend: {
+                        position: "bottom"
+                    }
+                }
+            }
+        }
+    );
+
+
+    // ========================================================
+    // FATURAMENTO POR RESPONSÁVEL
+    // ========================================================
+
+    const nomesResponsaveis = responsaveis.map(
+        item => item[0]
+    );
+
+    const valoresResponsaveis = responsaveis.map(
+        item => item[1]
+    );
+
+
+    new Chart(
+        document.getElementById("graficoResponsavel"),
+        {
+            type: "bar",
+
+            data: {
+                labels: nomesResponsaveis,
+
+                datasets: [
+                    {
+                        label: "Faturamento",
+
+                        data: valoresResponsaveis
+                    }
+                ]
+            },
+
+            options: {
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        }
+    );
+
+
+    // ========================================================
+    // EVOLUÇÃO MENSAL
+    // ========================================================
+
+    const nomesMeses = [
+        "Janeiro",
+        "Fevereiro",
+        "Março",
+        "Abril",
+        "Maio",
+        "Junho",
+        "Julho",
+        "Agosto",
+        "Setembro",
+        "Outubro",
+        "Novembro",
+        "Dezembro"
+    ];
+
+
+    const meses = faturamentoMensal.map(
+        function(item) {
+
+            const partes = item[0].split("-");
+
+            const ano = partes[0];
+
+            const numeroMes = parseInt(
+                partes[1],
+                10
+            );
+
+            return (
+                nomesMeses[numeroMes - 1]
+                + "/"
+                + ano
+            );
+        }
+    );
+
+
+    const valoresMensais = faturamentoMensal.map(
+        item => item[1]
+    );
+
+
+    new Chart(
+        document.getElementById("graficoMensal"),
+        {
+            type: "line",
+
+            data: {
+                labels: meses,
+
+                datasets: [
+                    {
+                        label: "Faturamento",
+
+                        data: valoresMensais,
+
+                        tension: 0.3,
+
+                        fill: false
+                    }
+                ]
+            },
+
+            options: {
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        }
+    );
+
+</script>
+
+
+</body>
+
+</html>

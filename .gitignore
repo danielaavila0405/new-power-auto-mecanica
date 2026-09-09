@@ -1,0 +1,6 @@
+@"
+oficina.db
+oficina_backup.db
+__pycache__/
+*.pyc
+"@ | Set-Content -Encoding UTF8 ".\.gitignore"
