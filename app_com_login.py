@@ -40,7 +40,18 @@ app.secret_key = os.environ.get(
 )
 
 pasta_projeto = Path(__file__).parent
-banco = pasta_projeto / "oficina.db"
+
+# Em desenvolvimento/local: usa oficina.db ao lado deste arquivo.
+# Em produção (Railway): use NEW_POWER_DATABASE para apontar para o
+# caminho do banco dentro do volume persistente, por exemplo:
+# /app/data/oficina.db
+CAMINHO_BANCO = os.environ.get(
+    "NEW_POWER_DATABASE",
+    str(pasta_projeto / "oficina.db")
+)
+
+banco = Path(CAMINHO_BANCO)
+banco.parent.mkdir(parents=True, exist_ok=True)
 
 
 def conectar_banco():
