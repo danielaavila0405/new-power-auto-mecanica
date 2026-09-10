@@ -418,6 +418,7 @@
 
                         </div>
 
+
                         <div>
 
                             <label>
@@ -435,6 +436,7 @@
 
                         </div>
 
+
                         <div>
 
                             <label>
@@ -445,11 +447,12 @@
                                 type="text"
                                 class="moeda"
                                 name="peca_valor"
-                                value="{{ '%.2f'|format(peca[2]) }}"
-                                oninput="formatarMoeda(this); calcularTotais()"
+                                value="{{ '%.2f'|format(peca[2])|replace('.', ',') }}"
+                                oninput="calcularTotais()"
                             >
 
                         </div>
+
 
                         <button
                             type="button"
@@ -480,6 +483,7 @@
 
                         </div>
 
+
                         <div>
 
                             <label>
@@ -492,9 +496,11 @@
                                 value="1"
                                 min="1"
                                 step="1"
+                                oninput="calcularTotais()"
                             >
 
                         </div>
+
 
                         <div>
 
@@ -507,9 +513,11 @@
                                 class="moeda"
                                 name="peca_valor"
                                 value="0,00"
+                                oninput="calcularTotais()"
                             >
 
                         </div>
+
 
                         <button
                             type="button"
@@ -524,6 +532,7 @@
                 {% endif %}
 
             </div>
+
 
             <button
                 type="button"
@@ -566,6 +575,7 @@
 
                         </div>
 
+
                         <div>
 
                             <label>
@@ -576,11 +586,12 @@
                                 type="text"
                                 class="moeda"
                                 name="servico_valor"
-                                value="{{ '%.2f'|format(servico[1]) }}"
-                                oninput="formatarMoeda(this); calcularTotais()"
+                                value="{{ '%.2f'|format(servico[1])|replace('.', ',') }}"
+                                oninput="calcularTotais()"
                             >
 
                         </div>
+
 
                         <button
                             type="button"
@@ -611,6 +622,7 @@
 
                         </div>
 
+
                         <div>
 
                             <label>
@@ -622,9 +634,11 @@
                                 class="moeda"
                                 name="servico_valor"
                                 value="0,00"
+                                oninput="calcularTotais()"
                             >
 
                         </div>
+
 
                         <button
                             type="button"
@@ -639,6 +653,7 @@
                 {% endif %}
 
             </div>
+
 
             <button
                 type="button"
@@ -658,6 +673,7 @@
             <h3>
                 Informações da OS
             </h3>
+
 
             <div class="campo">
 
@@ -846,6 +862,7 @@
                 CANCELAR
             </a>
 
+
             <button
                 type="submit"
                 class="botao"
@@ -862,38 +879,97 @@
 
 <script>
 
+/* ============================================================
+   CONVERTER VALOR DIGITADO PARA NÚMERO
+   Aceita:
+
+   48
+   48,00
+   48.00
+   4.800,00
+   4,800.00
+   ============================================================ */
+
 function converterParaNumero(valor) {
 
-    if (!valor) {
+    if (valor === null || valor === undefined) {
         return 0;
     }
 
     valor = valor
+        .toString()
+        .trim()
         .replace("R$", "")
-        .replace(/\s/g, "")
-        .replace(/\./g, "")
-        .replace(",", ".");
+        .replace(/\s/g, "");
+
+    if (valor === "") {
+        return 0;
+    }
+
+    /*
+       Caso tenha vírgula e ponto:
+    */
+
+    if (
+        valor.includes(",") &&
+        valor.includes(".")
+    ) {
+
+        /*
+           Formato brasileiro:
+           4.800,00
+        */
+
+        if (
+            valor.lastIndexOf(",") >
+            valor.lastIndexOf(".")
+        ) {
+
+            valor = valor
+                .replace(/\./g, "")
+                .replace(",", ".");
+
+        }
+
+        /*
+           Formato americano:
+           4,800.00
+        */
+
+        else {
+
+            valor = valor
+                .replace(/,/g, "");
+
+        }
+
+    }
+
+    /*
+       Somente vírgula:
+       48,00
+    */
+
+    else if (valor.includes(",")) {
+
+        valor = valor.replace(",", ".");
+
+    }
+
+    /*
+       Somente ponto:
+       48.00
+
+       Não fazemos nenhuma alteração.
+    */
 
     return parseFloat(valor) || 0;
 }
 
 
-function formatarMoeda(campo) {
-
-    let valor = campo.value;
-
-    valor = valor.replace(/\D/g, "");
-
-    if (valor === "") {
-        valor = "0";
-    }
-
-    valor = (parseInt(valor, 10) / 100).toFixed(2);
-
-    campo.value = valor
-        .replace(".", ",");
-}
-
+/* ============================================================
+   PREPARAR VALORES ANTES DE SALVAR
+   ============================================================ */
 
 function prepararValores() {
 
@@ -901,53 +977,73 @@ function prepararValores() {
         .querySelectorAll(".moeda")
         .forEach(function(campo) {
 
-            let numero = converterParaNumero(
-                campo.value
-            );
+            const numero =
+                converterParaNumero(
+                    campo.value
+                );
 
-            campo.value = numero.toFixed(2);
+            campo.value =
+                numero.toFixed(2);
 
         });
 
 }
 
 
+/* ============================================================
+   CALCULAR TOTAIS
+   ============================================================ */
+
 function calcularTotais() {
 
     let totalPecas = 0;
     let totalServicos = 0;
 
-    document
-        .querySelectorAll(
-            'input[name="peca_quantidade"]'
-        )
-        .forEach(function(campo, indice) {
 
-            let quantidades =
+    /*
+       PEÇAS
+    */
+
+    const pecas =
+        document.querySelectorAll(
+            'input[name="peca_descricao"]'
+        );
+
+    pecas.forEach(
+        function(descricaoCampo, indice) {
+
+            const quantidadeCampos =
                 document.querySelectorAll(
                     'input[name="peca_quantidade"]'
                 );
 
-            let valores =
+            const valorCampos =
                 document.querySelectorAll(
                     'input[name="peca_valor"]'
                 );
 
-            let quantidade =
+            const quantidade =
                 parseFloat(
-                    quantidades[indice].value
+                    quantidadeCampos[indice].value
                 ) || 0;
 
-            let valor =
+            const valor =
                 converterParaNumero(
-                    valores[indice].value
+                    valorCampos[indice].value
                 );
 
-            totalPecas +=
+            const total =
                 quantidade * valor;
 
-        });
+            totalPecas += total;
 
+        }
+    );
+
+
+    /*
+       SERVIÇOS
+    */
 
     document
         .querySelectorAll(
@@ -963,32 +1059,66 @@ function calcularTotais() {
         });
 
 
+    /*
+       EXIBIR TOTAL DE PEÇAS
+    */
+
     document.getElementById(
         "totalPecas"
     ).innerText =
-        "R$ " +
-        totalPecas.toFixed(2)
-            .replace(".", ",");
+        totalPecas
+            .toLocaleString(
+                "pt-BR",
+                {
+                    style: "currency",
+                    currency: "BRL"
+                }
+            );
 
+
+    /*
+       EXIBIR TOTAL DE SERVIÇOS
+    */
 
     document.getElementById(
         "totalServicos"
     ).innerText =
-        "R$ " +
-        totalServicos.toFixed(2)
-            .replace(".", ",");
+        totalServicos
+            .toLocaleString(
+                "pt-BR",
+                {
+                    style: "currency",
+                    currency: "BRL"
+                }
+            );
 
+
+    /*
+       EXIBIR TOTAL GERAL
+    */
+
+    const totalGeral =
+        totalPecas +
+        totalServicos;
 
     document.getElementById(
         "totalGeral"
     ).innerText =
-        "R$ " +
-        (totalPecas + totalServicos)
-            .toFixed(2)
-            .replace(".", ",");
+        totalGeral
+            .toLocaleString(
+                "pt-BR",
+                {
+                    style: "currency",
+                    currency: "BRL"
+                }
+            );
 
 }
 
+
+/* ============================================================
+   ADICIONAR PEÇA
+   ============================================================ */
 
 function adicionarPeca() {
 
@@ -1019,6 +1149,7 @@ function adicionarPeca() {
 
         </div>
 
+
         <div>
 
             <label>
@@ -1036,6 +1167,7 @@ function adicionarPeca() {
 
         </div>
 
+
         <div>
 
             <label>
@@ -1047,10 +1179,11 @@ function adicionarPeca() {
                 class="moeda"
                 name="peca_valor"
                 value="0,00"
-                oninput="formatarMoeda(this); calcularTotais()"
+                oninput="calcularTotais()"
             >
 
         </div>
+
 
         <button
             type="button"
@@ -1066,6 +1199,10 @@ function adicionarPeca() {
 
 }
 
+
+/* ============================================================
+   ADICIONAR SERVIÇO
+   ============================================================ */
 
 function adicionarServico() {
 
@@ -1097,6 +1234,7 @@ function adicionarServico() {
 
         </div>
 
+
         <div>
 
             <label>
@@ -1108,10 +1246,11 @@ function adicionarServico() {
                 class="moeda"
                 name="servico_valor"
                 value="0,00"
-                oninput="formatarMoeda(this); calcularTotais()"
+                oninput="calcularTotais()"
             >
 
         </div>
+
 
         <button
             type="button"
@@ -1128,6 +1267,10 @@ function adicionarServico() {
 }
 
 
+/* ============================================================
+   REMOVER LINHA
+   ============================================================ */
+
 function removerLinha(botao) {
 
     const linha =
@@ -1139,6 +1282,10 @@ function removerLinha(botao) {
 
 }
 
+
+/* ============================================================
+   ATUALIZAR VEÍCULOS CONFORME CLIENTE
+   ============================================================ */
 
 function atualizarVeiculos() {
 
@@ -1156,8 +1303,11 @@ function atualizarVeiculos() {
         function(opcao) {
 
             if (opcao.value === "") {
+
                 opcao.style.display = "";
+
                 return;
+
             }
 
             if (
@@ -1167,7 +1317,9 @@ function atualizarVeiculos() {
 
                 opcao.style.display = "";
 
-            } else {
+            }
+
+            else {
 
                 opcao.style.display = "none";
 
@@ -1179,24 +1331,13 @@ function atualizarVeiculos() {
 }
 
 
+/* ============================================================
+   INICIALIZAÇÃO
+   ============================================================ */
+
 document.addEventListener(
     "DOMContentLoaded",
     function() {
-
-        document
-            .querySelectorAll(".moeda")
-            .forEach(function(campo) {
-
-                let valor =
-                    converterParaNumero(
-                        campo.value
-                    );
-
-                campo.value =
-                    valor.toFixed(2)
-                        .replace(".", ",");
-
-            });
 
         atualizarVeiculos();
 
