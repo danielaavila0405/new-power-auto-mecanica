@@ -102,38 +102,6 @@ A solução desenvolvida foi uma aplicação web própria, adaptada às necessid
 ### Deploy
 - Railway
 
----
-
-## Arquitetura simplificada
-
-```text
-Usuário
-   |
-   v
-Interface Web
-HTML + CSS + JavaScript
-   |
-   v
-Flask / Python
-   |
-   +--------------------+
-   |                    |
-   v                    v
-Regras de negócio     Geração de PDF
-   |
-   v
-SQLite
-   |
-   +----------------------------+
-   |            |               |
-Clientes     Veículos        Ordens de Serviço
-                                |
-                                +---- Peças
-                                |
-                                +---- Serviços
-                                |
-                                +---- Pagamentos
-
 ## Banco de dados
 
 O sistema utiliza **SQLite** como banco de dados relacional, responsável pelo armazenamento das informações da aplicação.
@@ -186,6 +154,40 @@ Permite atualizar informações da OS, incluindo peças, serviços, valores, res
 ### Dashboard
 
 Painel com indicadores e gráficos para acompanhamento do faturamento e da operação da oficina.
+
+
+---
+
+## Arquitetura simplificada
+
+```text
+Usuário
+   |
+   v
+Interface Web
+HTML + CSS + JavaScript
+   |
+   v
+Flask / Python
+   |
+   +--------------------+
+   |                    |
+   v                    v
+Regras de negócio     Geração de PDF
+   |
+   v
+SQLite
+   |
+   +----------------------------+
+   |            |               |
+Clientes     Veículos        Ordens de Serviço
+                                |
+                                +---- Peças
+                                |
+                                +---- Serviços
+                                |
+                                +---- Pagamentos
+
 
 
 
