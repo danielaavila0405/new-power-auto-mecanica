@@ -139,22 +139,31 @@ A aplicação possui uma interface web desenvolvida para facilitar a rotina da o
 
 Tela para abertura de uma nova Ordem de Serviço, com seleção do cliente e veículo, inclusão de peças e serviços, responsável pela mão de obra e forma de pagamento.
 
+![Nova Ordem de Serviço](Nova-OS.jpeg)
+
 ### Ordens de Serviço
 
 Tela de acompanhamento das Ordens de Serviço cadastradas, com consulta, visualização, edição e controle de status.
+
+![Ordens de Serviço](Ordens-de-Servico.jpeg)
 
 ### Edição de Ordem de Serviço
 
 Permite atualizar informações da OS, incluindo peças, serviços, valores, responsável, forma de pagamento e status.
 
+![Edição de Ordem de Serviço](Editar-OS.jpeg)
+
 ### Financeiro
 
 Área destinada à consulta e acompanhamento dos valores das Ordens de Serviço, com filtros por período e formas de pagamento.
+
+![Financeiro](Financeiro.jpeg)
 
 ### Dashboard
 
 Painel com indicadores e gráficos para acompanhamento do faturamento e da operação da oficina.
 
+![Dashboard](Dashboard.jpeg)
 
 ---
 
