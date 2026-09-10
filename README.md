@@ -134,3 +134,59 @@ Clientes     Veículos        Ordens de Serviço
                                 |
                                 +---- Pagamentos
 
+## Banco de dados
+
+O sistema utiliza **SQLite** como banco de dados relacional, responsável pelo armazenamento das informações da aplicação.
+
+Principais tabelas:
+
+- `clientes` — cadastro dos clientes.
+- `veiculos` — cadastro dos veículos e vínculo com os clientes.
+- `ordens_servico` — informações principais das Ordens de Serviço.
+- `pecas_os` — peças utilizadas em cada Ordem de Serviço.
+- `servicos_os` — serviços e valores de mão de obra.
+- `usuarios` — usuários do sistema e informações de acesso.
+
+Os relacionamentos entre clientes, veículos e Ordens de Serviço permitem manter o histórico dos atendimentos realizados para cada veículo.
+
+## Regras de negócio
+
+A aplicação foi desenvolvida considerando as regras e necessidades da operação da oficina.
+
+- Peças e serviços são registrados separadamente em cada Ordem de Serviço.
+- O valor total da OS é calculado automaticamente a partir das peças e dos serviços.
+- A mão de obra é controlada separadamente dos valores das peças.
+- A aplicação registra quem foi o responsável pela execução do serviço.
+- As Ordens de Serviço possuem controle de status: Aberta, Em andamento, Finalizada e Cancelada.
+- Cada veículo é vinculado a um cliente, permitindo consultar o histórico de Ordens de Serviço.
+- As informações de pagamento são registradas na OS.
+- O sistema permite editar uma Ordem de Serviço sem perder o vínculo com o cliente e o veículo.
+- O valor de repasse da mão de obra é tratado internamente pelo sistema e não é exibido no documento destinado ao cliente.
+
+## Demonstração
+
+A aplicação possui uma interface web desenvolvida para facilitar a rotina da oficina, permitindo o gerenciamento de clientes, veículos, Ordens de Serviço e informações financeiras.
+
+### Nova Ordem de Serviço
+
+Tela para abertura de uma nova Ordem de Serviço, com seleção do cliente e veículo, inclusão de peças e serviços, responsável pela mão de obra e forma de pagamento.
+
+### Ordens de Serviço
+
+Tela de acompanhamento das Ordens de Serviço cadastradas, com consulta, visualização, edição e controle de status.
+
+### Edição de Ordem de Serviço
+
+Permite atualizar informações da OS, incluindo peças, serviços, valores, responsável, forma de pagamento e status.
+
+### Financeiro
+
+Área destinada à consulta e acompanhamento dos valores das Ordens de Serviço, com filtros por período e formas de pagamento.
+
+### Dashboard
+
+Painel com indicadores e gráficos para acompanhamento do faturamento e da operação da oficina.
+
+
+
+
