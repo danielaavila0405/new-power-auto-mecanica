@@ -1,6 +1,6 @@
-@"
 oficina.db
 oficina_backup.db
+*_backup.py
 __pycache__/
 *.pyc
-"@ | Set-Content -Encoding UTF8 ".\.gitignore"
+.vscode/

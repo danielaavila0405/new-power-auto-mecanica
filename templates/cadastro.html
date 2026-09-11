@@ -282,13 +282,27 @@
                     Placa
                 </label>
 
-                <input
-                    type="text"
-                    id="placa"
-                    name="placa"
-                    placeholder="Digite a placa"
-                    required
-                >
+                <div style="display: flex; gap: 8px;">
+                    <input
+                        type="text"
+                        id="placa"
+                        name="placa"
+                        placeholder="Ex: ABC1D23"
+                        maxlength="8"
+                        style="text-transform: uppercase;"
+                        required
+                    >
+                    <button
+                        type="button"
+                        id="btnBuscarPlaca"
+                        onclick="buscarDadosPlaca()"
+                        style="background-color: #222222; color: white; border: none; border-radius: 4px; padding: 0 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;"
+                    >
+                        🔍 Buscar
+                    </button>
+                </div>
+
+                <small id="statusPlaca" style="display: none; margin-top: 5px; font-size: 13px;"></small>
 
             </div>
 
@@ -392,6 +406,77 @@
 
 
 </div>
+
+<script>
+async function buscarDadosPlaca() {
+    const inputPlaca = document.getElementById("placa");
+    const statusPlaca = document.getElementById("statusPlaca");
+    const btnBuscar = document.getElementById("btnBuscarPlaca");
+
+    let placa = inputPlaca.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    if (placa.length < 7) {
+        statusPlaca.textContent = "Digite uma placa válida com 7 caracteres.";
+        statusPlaca.style.color = "#d71920";
+        statusPlaca.style.display = "block";
+        return;
+    }
+
+    btnBuscar.disabled = true;
+    btnBuscar.textContent = "Buscando...";
+    statusPlaca.textContent = "Consultando dados do veículo...";
+    statusPlaca.style.color = "#0056b3";
+    statusPlaca.style.display = "block";
+
+    try {
+        const resposta = await fetch(`/api/consulta-placa/${placa}`);
+        const dados = await resposta.json();
+
+        if (dados.sucesso && dados.dados) {
+            if (dados.dados.marca) {
+                document.getElementById("marca").value = dados.dados.marca;
+            }
+            if (dados.dados.modelo) {
+                document.getElementById("modelo").value = dados.dados.modelo;
+            }
+            if (dados.dados.ano) {
+                document.getElementById("ano").value = dados.dados.ano;
+            }
+
+            let origemTexto = dados.origem === "banco_local" ? " (cadastro anterior na oficina)" : "";
+            statusPlaca.textContent = "✓ Veículo localizado com sucesso!" + origemTexto;
+            statusPlaca.style.color = "#28a745";
+
+            const km = document.getElementById("quilometragem");
+            if (km) km.focus();
+        } else {
+            statusPlaca.textContent = dados.mensagem || "Veículo não localizado. Preencha manualmente.";
+            statusPlaca.style.color = "#c0392b";
+        }
+    } catch (e) {
+        statusPlaca.textContent = "Não foi possível conectar à consulta de placas. Preencha manualmente.";
+        statusPlaca.style.color = "#856404";
+    } finally {
+        btnBuscar.disabled = false;
+        btnBuscar.innerHTML = "🔍 Buscar";
+    }
+}
+
+document.getElementById("placa").addEventListener("input", function(e) {
+    this.value = this.value.toUpperCase();
+    let limpa = this.value.replace(/[^A-Z0-9]/g, "");
+    if (limpa.length === 7) {
+        buscarDadosPlaca();
+    }
+});
+
+document.getElementById("placa").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        buscarDadosPlaca();
+    }
+});
+</script>
 
 </body>
 

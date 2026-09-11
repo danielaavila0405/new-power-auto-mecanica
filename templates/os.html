@@ -706,13 +706,25 @@
                                 Placa
                             </label>
 
-                            <input
-                                type="text"
-                                id="novoVeiculoPlaca"
-                                placeholder="ABC1D23"
-                                maxlength="7"
-                                style="text-transform: uppercase;"
-                            >
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <input
+                                    type="text"
+                                    id="novoVeiculoPlaca"
+                                    placeholder="ABC1D23"
+                                    maxlength="8"
+                                    style="text-transform: uppercase; margin-bottom: 0;"
+                                >
+                                <button
+                                    type="button"
+                                    id="btnBuscarPlacaModal"
+                                    onclick="buscarDadosPlacaModal()"
+                                    style="background-color: #222222; color: white; border: none; border-radius: 4px; padding: 0 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;"
+                                >
+                                    🔍 Buscar
+                                </button>
+                            </div>
+
+                            <small id="statusPlacaModal" style="display: none; margin-bottom: 8px; font-size: 13px;"></small>
 
 
                             <label>
@@ -1648,6 +1660,71 @@ function fecharCadastroVeiculo() {
         .getElementById("erroVeiculo")
         .style.display =
         "none";
+
+    const statusModal = document.getElementById("statusPlacaModal");
+    if (statusModal) {
+        statusModal.style.display = "none";
+        statusModal.textContent = "";
+    }
+}
+
+
+// ==================================================
+// CONSULTAR PLACA NO MODAL DA OS
+// ==================================================
+
+async function buscarDadosPlacaModal() {
+    const inputPlaca = document.getElementById("novoVeiculoPlaca");
+    const statusModal = document.getElementById("statusPlacaModal");
+    const btnBuscar = document.getElementById("btnBuscarPlacaModal");
+
+    let placa = inputPlaca.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    if (placa.length < 7) {
+        statusModal.textContent = "Digite uma placa válida com 7 caracteres.";
+        statusModal.style.color = "#d71920";
+        statusModal.style.display = "block";
+        return;
+    }
+
+    btnBuscar.disabled = true;
+    btnBuscar.textContent = "Buscando...";
+    statusModal.textContent = "Consultando dados do veículo...";
+    statusModal.style.color = "#0056b3";
+    statusModal.style.display = "block";
+
+    try {
+        const resposta = await fetch(`/api/consulta-placa/${placa}`);
+        const dados = await resposta.json();
+
+        if (dados.sucesso && dados.dados) {
+            if (dados.dados.marca) {
+                document.getElementById("novoVeiculoMarca").value = dados.dados.marca;
+            }
+            if (dados.dados.modelo) {
+                document.getElementById("novoVeiculoModelo").value = dados.dados.modelo;
+            }
+            if (dados.dados.ano) {
+                document.getElementById("novoVeiculoAno").value = dados.dados.ano;
+            }
+
+            let origemTexto = dados.origem === "banco_local" ? " (veículo já registrado)" : "";
+            statusModal.textContent = "✓ Veículo localizado com sucesso!" + origemTexto;
+            statusModal.style.color = "#28a745";
+
+            const km = document.getElementById("novoVeiculoQuilometragem");
+            if (km) km.focus();
+        } else {
+            statusModal.textContent = dados.mensagem || "Veículo não localizado. Preencha manualmente.";
+            statusModal.style.color = "#c0392b";
+        }
+    } catch (e) {
+        statusModal.textContent = "Não foi possível conectar ao serviço de placas. Preencha manualmente.";
+        statusModal.style.color = "#856404";
+    } finally {
+        btnBuscar.disabled = false;
+        btnBuscar.innerHTML = "🔍 Buscar";
+    }
 }
 
 
@@ -2361,6 +2438,24 @@ document.addEventListener(
 
         calcularTotais();
 
+        // Busca automática de placa no modal
+        const campoPlacaModal = document.getElementById("novoVeiculoPlaca");
+        if (campoPlacaModal) {
+            campoPlacaModal.addEventListener("input", function() {
+                this.value = this.value.toUpperCase();
+                let limpa = this.value.replace(/[^A-Z0-9]/g, "");
+                if (limpa.length === 7) {
+                    buscarDadosPlacaModal();
+                }
+            });
+
+            campoPlacaModal.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    buscarDadosPlacaModal();
+                }
+            });
+        }
     }
 );
 
