@@ -85,6 +85,7 @@
                         <th>Perfil</th>
                         <th>Status da senha</th>
                         <th class="acoes">Redefinir senha</th>
+                        <th style="text-align: center;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -112,6 +113,17 @@
                                 <input type="password" name="confirmar_senha" minlength="8" placeholder="Confirmar" required style="margin-top:6px;">
                                 <button type="submit" class="botao">REDEFINIR</button>
                             </form>
+                        </td>
+                        <td style="text-align: center; vertical-align: middle;">
+                            {% if item[0] != session["usuario_id"] %}
+                            <form method="POST" action="/usuarios/{{ item[0] }}/excluir" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir o usuário {{ item[1] }} ({{ item[2] }})? Esta ação é definitiva.');">
+                                <button type="submit" style="background:#d71920; color:white; border:none; padding:7px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:5px;" title="Excluir usuário">
+                                    <i class="fa-solid fa-trash"></i> Excluir
+                                </button>
+                            </form>
+                            {% else %}
+                            <span style="color:#888; font-size:13px; font-style:italic;">(Você)</span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}

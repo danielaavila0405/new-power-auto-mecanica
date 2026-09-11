@@ -413,6 +413,36 @@ def resetar_senha(id_usuario):
 
 
 # ============================================================
+# EXCLUIR USUÁRIO — ADMINISTRADOR
+# ============================================================
+
+@app.route("/usuarios/<int:id_usuario>/excluir", methods=["POST"])
+def excluir_usuario(id_usuario):
+
+    if not usuario_e_admin():
+        return "Acesso negado. Apenas administradores podem excluir usuários.", 403
+
+    if id_usuario == session.get("usuario_id"):
+        return redirect("/usuarios?mensagem=Você+não+pode+excluir+seu+próprio+usuário+conectado.&tipo=erro")
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    cursor.execute("SELECT usuario FROM usuarios WHERE id_usuario = ?", (id_usuario,))
+    dados = cursor.fetchone()
+
+    if dados is None:
+        conexao.close()
+        return redirect("/usuarios?mensagem=Usuário+não+encontrado.&tipo=erro")
+
+    cursor.execute("DELETE FROM usuarios WHERE id_usuario = ?", (id_usuario,))
+    conexao.commit()
+    conexao.close()
+
+    return redirect(f"/usuarios?mensagem=Usuário+{dados[0]}+excluído+com+sucesso.&tipo=sucesso")
+
+
+# ============================================================
 # MENU PRINCIPAL
 # ============================================================
 
@@ -2998,13 +3028,60 @@ def dashboard():
 
 
 # ============================================================
-# ESQUECI A SENHA
+# ESQUECI A SENHA (REDEFINIÇÃO COM CHAVE MESTRA DA OFICINA)
 # ============================================================
 
-@app.route("/esqueci-senha")
+CHAVE_MESTRA_RECUPERACAO = os.environ.get("NEW_POWER_CHAVE_MESTRA", "NEWPOWER2026")
+WHATSAPP_ADMIN = "5562991175451"
+
+@app.route("/esqueci-senha", methods=["GET", "POST"])
 def esqueci_senha():
 
-    return render_template("esqueci_senha.html")
+    mensagem = ""
+    sucesso = ""
+
+    if request.method == "POST":
+        usuario = request.form.get("usuario", "").strip()
+        chave = request.form.get("chave_mestra", "").strip()
+        nova_senha = request.form.get("nova_senha", "")
+        confirmar_senha = request.form.get("confirmar_senha", "")
+
+        if not usuario or not chave or not nova_senha or not confirmar_senha:
+            mensagem = "Preencha todos os campos."
+        elif chave != CHAVE_MESTRA_RECUPERACAO:
+            mensagem = "Chave de segurança da oficina incorreta."
+        elif len(nova_senha) < 8:
+            mensagem = "A nova senha deve ter no mínimo 8 caracteres."
+        elif nova_senha != confirmar_senha:
+            mensagem = "A confirmação da nova senha não confere."
+        else:
+            conexao = conectar_banco()
+            cursor = conexao.cursor()
+            cursor.execute("SELECT id_usuario FROM usuarios WHERE usuario = ?", (usuario,))
+            dados = cursor.fetchone()
+
+            if dados is None:
+                mensagem = "Usuário não encontrado no sistema."
+                conexao.close()
+            else:
+                cursor.execute(
+                    """
+                    UPDATE usuarios
+                    SET senha = ?, senha_temporaria = 0
+                    WHERE id_usuario = ?
+                    """,
+                    (generate_password_hash(nova_senha), dados[0])
+                )
+                conexao.commit()
+                conexao.close()
+                sucesso = "Sua senha foi redefinida com sucesso! Você já pode fazer login."
+
+    return render_template(
+        "esqueci_senha.html",
+        mensagem=mensagem,
+        sucesso=sucesso,
+        whatsapp_admin=WHATSAPP_ADMIN
+    )
 
 
 # ============================================================

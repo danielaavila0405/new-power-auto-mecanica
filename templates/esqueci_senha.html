@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Esqueci minha senha</title>
+    <title>Recuperar Senha - New Power Auto Mecânica</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         * { box-sizing: border-box; }
         body {
@@ -12,52 +13,218 @@
             background: #eeeeee;
             min-height: 100vh;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             padding: 20px;
         }
         .card {
             width: 100%;
-            max-width: 470px;
-            background: #fff;
-            padding: 35px;
+            max-width: 460px;
+            background: #ffffff;
+            padding: 35px 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 18px rgba(0,0,0,.12);
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
             text-align: center;
         }
-        h1 { margin: 0 0 15px; color: #111; font-size: 24px; }
-        p { color: #555; line-height: 1.5; }
-        .aviso {
-            margin: 22px 0;
-            padding: 15px;
-            border-left: 4px solid #c40000;
-            background: #f7f7f7;
+        .logo {
+            width: 110px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        h1 {
+            margin: 0;
+            color: #111111;
+            font-size: 22px;
+        }
+        .subtitulo {
+            color: #666666;
+            margin: 8px 0 20px;
+            font-size: 14px;
+        }
+        label {
+            display: block;
             text-align: left;
+            font-weight: bold;
+            margin: 12px 0 5px;
+            color: #333333;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #c5c5c5;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #c40000;
+        }
+        .ajuda-campo {
+            text-align: left;
+            font-size: 12px;
+            color: #777;
+            margin-top: 4px;
         }
         .botao {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 11px 18px;
+            width: 100%;
+            margin-top: 18px;
+            padding: 12px;
+            border: none;
             border-radius: 6px;
-            background: #111;
-            color: white;
-            text-decoration: none;
+            background: #111111;
+            color: #ffffff;
+            font-size: 15px;
             font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: background 0.2s;
         }
-        .botao:hover { background: #c40000; }
+        .botao:hover {
+            background: #c40000;
+        }
+        .divisor {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 24px 0 16px;
+            color: #888;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .divisor::before, .divisor::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+        .divisor:not(:empty)::before {
+            margin-right: .75em;
+        }
+        .divisor:not(:empty)::after {
+            margin-left: .75em;
+        }
+        .botao-whats {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            background: #25D366;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-sizing: border-box;
+            transition: background 0.2s;
+        }
+        .botao-whats:hover {
+            background: #1da851;
+        }
+        .link-voltar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 20px;
+            color: #555555;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .link-voltar:hover {
+            color: #c40000;
+        }
+        .erro {
+            margin: 15px 0;
+            padding: 11px;
+            background: #ffebee;
+            border: 1px solid #e57373;
+            color: #b71c1c;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: left;
+        }
+        .sucesso {
+            margin: 15px 0;
+            padding: 15px;
+            background: #e8f5e9;
+            border: 1px solid #81c784;
+            color: #1b5e20;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: left;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h1>Esqueci minha senha</h1>
-        <p>Para manter o sistema seguro, a redefinição de senha é feita pelo administrador.</p>
+        <img src="{{ url_for('static', filename='logo.jpg') }}" class="logo" alt="New Power Auto Mecânica">
+        <h1>Recuperação de Senha</h1>
+        <div class="subtitulo">Sistema New Power Auto Mecânica</div>
 
-        <div class="aviso">
-            Solicite ao administrador da New Power Auto Mecânica que redefina sua senha.
-            Depois do acesso, o sistema solicitará a troca da senha temporária.
-        </div>
+        {% if sucesso %}
+            <div class="sucesso">
+                <i class="fa-solid fa-circle-check" style="color: #2e7d32; font-size: 18px;"></i>
+                <strong>Sucesso!</strong><br>
+                {{ sucesso }}
+            </div>
+            <a href="/login" class="botao">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                IR PARA O LOGIN
+            </a>
+        {% else %}
+            {% if mensagem %}
+                <div class="erro">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    {{ mensagem }}
+                </div>
+            {% endif %}
 
-        <a href="/login" class="botao">VOLTAR PARA O LOGIN</a>
+            <form method="POST" action="/esqueci-senha">
+                <label for="usuario">Usuário do Sistema</label>
+                <input type="text" id="usuario" name="usuario" required autofocus placeholder="Digite seu nome de usuário">
+
+                <label for="chave_mestra">Chave de Segurança da Oficina</label>
+                <input type="password" id="chave_mestra" name="chave_mestra" required placeholder="Digite a chave mestra">
+                <div class="ajuda-campo">Chave interna de segurança fornecida pela gerência.</div>
+
+                <label for="nova_senha">Nova Senha</label>
+                <input type="password" id="nova_senha" name="nova_senha" minlength="8" required placeholder="Mínimo de 8 caracteres">
+
+                <label for="confirmar_senha">Confirmar Nova Senha</label>
+                <input type="password" id="confirmar_senha" name="confirmar_senha" minlength="8" required placeholder="Repita a nova senha">
+
+                <button type="submit" class="botao">
+                    <i class="fa-solid fa-key"></i>
+                    REDEFINIR MINHA SENHA
+                </button>
+            </form>
+
+            <div class="divisor">ou solicite ao administrador</div>
+
+            <a href="https://wa.me/{{ whatsapp_admin }}?text=Ol%C3%A1%2C%20esqueci%20minha%20senha%20no%20sistema%20da%20New%20Power.%20Pode%20redefinir%20para%20mim%3F" target="_blank" class="botao-whats">
+                <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i>
+                Solicitar Senha no WhatsApp
+            </a>
+
+            <div>
+                <a href="/login" class="link-voltar">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Voltar para o Login
+                </a>
+            </div>
+        {% endif %}
     </div>
+
 </body>
 </html>
