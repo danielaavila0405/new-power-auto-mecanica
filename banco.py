@@ -105,6 +105,24 @@ if "status" not in nomes_colunas:
 
 
 # ==================================================
+# TABELA DE PEÇAS (CATÁLOGO / ESTOQUE)
+# ==================================================
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS pecas (
+    id_peca INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo TEXT,
+    nome TEXT NOT NULL,
+    marca TEXT,
+    preco_custo REAL NOT NULL,
+    preco_venda REAL NOT NULL,
+    estoque INTEGER DEFAULT 0,
+    ativo INTEGER DEFAULT 1
+)
+""")
+
+
+# ==================================================
 # TABELA DE PEÇAS DA OS
 # ==================================================
 
@@ -116,11 +134,27 @@ CREATE TABLE IF NOT EXISTS pecas_os (
     quantidade INTEGER NOT NULL,
     valor_unitario REAL NOT NULL,
     valor_total REAL NOT NULL,
+    valor_custo_unitario REAL NOT NULL DEFAULT 0,
+    id_peca INTEGER,
 
     FOREIGN KEY (id_os)
         REFERENCES ordens_servico(id_os)
 )
 """)
+
+# Garantir colunas novas em pecas_os
+cursor.execute("PRAGMA table_info(pecas_os)")
+colunas_pecas_os = [c[1] for c in cursor.fetchall()]
+if "valor_custo_unitario" not in colunas_pecas_os:
+    cursor.execute("ALTER TABLE pecas_os ADD COLUMN valor_custo_unitario REAL NOT NULL DEFAULT 0")
+if "id_peca" not in colunas_pecas_os:
+    cursor.execute("ALTER TABLE pecas_os ADD COLUMN id_peca INTEGER")
+
+# Garantir coluna valor_custo_pecas em ordens_servico
+cursor.execute("PRAGMA table_info(ordens_servico)")
+colunas_os = [c[1] for c in cursor.fetchall()]
+if "valor_custo_pecas" not in colunas_os:
+    cursor.execute("ALTER TABLE ordens_servico ADD COLUMN valor_custo_pecas REAL NOT NULL DEFAULT 0")
 
 
 # ==================================================
@@ -140,6 +174,23 @@ CREATE TABLE IF NOT EXISTS servicos_os (
 """)
 
 # ==================================================
+# TABELA DE SAÍDAS / DESPESAS
+# ==================================================
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS despesas (
+    id_despesa INTEGER PRIMARY KEY AUTOINCREMENT,
+    data TEXT NOT NULL,
+    descricao TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    valor REAL NOT NULL,
+    forma_pagamento TEXT,
+    status TEXT DEFAULT 'Pago',
+    observacoes TEXT
+)
+""")
+
+# ==================================================
 # TABELA DE USUÁRIOS
 # ==================================================
 
@@ -149,9 +200,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nome TEXT NOT NULL,
     usuario TEXT NOT NULL UNIQUE,
     senha TEXT NOT NULL,
-    perfil TEXT NOT NULL DEFAULT 'usuario'
+    perfil TEXT NOT NULL DEFAULT 'usuario',
+    senha_temporaria INTEGER NOT NULL DEFAULT 0
 )
 """)
+
+cursor.execute("PRAGMA table_info(usuarios)")
+colunas_usuarios = [c[1] for c in cursor.fetchall()]
+if "senha_temporaria" not in colunas_usuarios:
+    cursor.execute("ALTER TABLE usuarios ADD COLUMN senha_temporaria INTEGER NOT NULL DEFAULT 0")
 
 # ==================================================
 # SALVAR ALTERAÇÕES

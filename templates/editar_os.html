@@ -126,7 +126,7 @@
 
         .linha {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr auto;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
             gap: 8px;
             align-items: end;
             margin-bottom: 8px;
@@ -398,6 +398,14 @@
 
             <div id="pecas">
 
+                <datalist id="lista_pecas_catalogo">
+                    {% for item in pecas_catalogo %}
+                    <option value="{{ item[2] }}" data-codigo="{{ item[1] or '' }}" data-marca="{{ item[3] or '' }}" data-custo="{{ item[4] }}" data-venda="{{ item[5] }}" data-estoque="{{ item[6] }}">
+                        {{ item[2] }}{% if item[1] %} (Cód: {{ item[1] }}){% endif %}{% if item[3] %} - {{ item[3] }}{% endif %} | Venda: R$ {{ "%.2f"|format(item[5]) }}
+                    </option>
+                    {% endfor %}
+                </datalist>
+
                 {% if pecas %}
 
                     {% for peca in pecas %}
@@ -414,6 +422,9 @@
                                 type="text"
                                 name="peca_descricao"
                                 value="{{ peca[0] }}"
+                                list="lista_pecas_catalogo"
+                                oninput="aoSelecionarPeca(this)"
+                                required
                             >
 
                         </div>
@@ -432,6 +443,7 @@
                                 min="1"
                                 step="1"
                                 oninput="calcularTotais()"
+                                required
                             >
 
                         </div>
@@ -440,15 +452,34 @@
                         <div>
 
                             <label>
-                                Valor unitário
+                                Custo Unit. (R$)
                             </label>
 
                             <input
                                 type="text"
-                                class="moeda"
+                                class="moeda peca-custo"
+                                name="peca_custo"
+                                value="{{ '%.2f'|format(peca[4] or 0)|replace('.', ',') }}"
+                                oninput="calcularTotais()"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div>
+
+                            <label>
+                                Venda Unit. (R$)
+                            </label>
+
+                            <input
+                                type="text"
+                                class="moeda peca-valor"
                                 name="peca_valor"
                                 value="{{ '%.2f'|format(peca[2])|replace('.', ',') }}"
                                 oninput="calcularTotais()"
+                                required
                             >
 
                         </div>
@@ -479,6 +510,8 @@
                             <input
                                 type="text"
                                 name="peca_descricao"
+                                list="lista_pecas_catalogo"
+                                oninput="aoSelecionarPeca(this)"
                             >
 
                         </div>
@@ -505,12 +538,29 @@
                         <div>
 
                             <label>
-                                Valor unitário
+                                Custo Unit. (R$)
                             </label>
 
                             <input
                                 type="text"
-                                class="moeda"
+                                class="moeda peca-custo"
+                                name="peca_custo"
+                                value="0,00"
+                                oninput="calcularTotais()"
+                            >
+
+                        </div>
+
+
+                        <div>
+
+                            <label>
+                                Venda Unit. (R$)
+                            </label>
+
+                            <input
+                                type="text"
+                                class="moeda peca-valor"
                                 name="peca_valor"
                                 value="0,00"
                                 oninput="calcularTotais()"
@@ -1117,6 +1167,31 @@ function calcularTotais() {
 
 
 /* ============================================================
+   SELEÇÃO AUTOMÁTICA DE PEÇA DO CATÁLOGO
+   ============================================================ */
+
+function aoSelecionarPeca(inputDescricao) {
+    const valor = inputDescricao.value.trim();
+    const dataList = document.getElementById("lista_pecas_catalogo");
+    if (!dataList) return;
+
+    const option = Array.from(dataList.options).find(opt => opt.value.toLowerCase() === valor.toLowerCase());
+    if (option) {
+        const linha = inputDescricao.closest(".linha");
+        const campoCusto = linha.querySelector(".peca-custo");
+        const campoValor = linha.querySelector(".peca-valor");
+        if (campoCusto && option.dataset.custo) {
+            campoCusto.value = parseFloat(option.dataset.custo).toFixed(2).replace(".", ",");
+        }
+        if (campoValor && option.dataset.venda) {
+            campoValor.value = parseFloat(option.dataset.venda).toFixed(2).replace(".", ",");
+        }
+        calcularTotais();
+    }
+}
+
+
+/* ============================================================
    ADICIONAR PEÇA
    ============================================================ */
 
@@ -1145,6 +1220,9 @@ function adicionarPeca() {
             <input
                 type="text"
                 name="peca_descricao"
+                list="lista_pecas_catalogo"
+                oninput="aoSelecionarPeca(this)"
+                required
             >
 
         </div>
@@ -1163,6 +1241,7 @@ function adicionarPeca() {
                 min="1"
                 step="1"
                 oninput="calcularTotais()"
+                required
             >
 
         </div>
@@ -1171,15 +1250,34 @@ function adicionarPeca() {
         <div>
 
             <label>
-                Valor unitário
+                Custo Unit. (R$)
             </label>
 
             <input
                 type="text"
-                class="moeda"
+                class="moeda peca-custo"
+                name="peca_custo"
+                value="0,00"
+                oninput="calcularTotais()"
+                required
+            >
+
+        </div>
+
+
+        <div>
+
+            <label>
+                Venda Unit. (R$)
+            </label>
+
+            <input
+                type="text"
+                class="moeda peca-valor"
                 name="peca_valor"
                 value="0,00"
                 oninput="calcularTotais()"
+                required
             >
 
         </div>

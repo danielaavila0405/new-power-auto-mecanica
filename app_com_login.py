@@ -74,34 +74,169 @@ def conectar_banco():
     return conexao
 
 
-def garantir_tabela_usuarios():
+def converter_para_float(valor):
+    if valor is None:
+        return 0.0
+    if isinstance(valor, (int, float)):
+        return float(valor)
+    texto = str(valor).replace("R$", "").replace(" ", "").strip()
+    if not texto:
+        return 0.0
+    if "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    try:
+        return float(texto)
+    except ValueError:
+        return 0.0
+
+
+def garantir_tabelas_sistema():
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
+    # Clientes
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS clientes (
+            id_cliente INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            telefone TEXT NOT NULL,
+            cpf_cnpj TEXT
+        )
+    """)
+
+    cursor.execute("PRAGMA table_info(clientes)")
+    colunas_cli = [linha[1] for linha in cursor.fetchall()]
+    if "cpf_cnpj" not in colunas_cli:
+        cursor.execute("ALTER TABLE clientes ADD COLUMN cpf_cnpj TEXT")
+
+    # Veículos
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS veiculos (
+            id_veiculo INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_cliente INTEGER NOT NULL,
+            placa TEXT NOT NULL,
+            modelo TEXT,
+            marca TEXT,
+            ano TEXT,
+            cor TEXT,
+            ativo INTEGER DEFAULT 1,
+            FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente)
+        )
+    """)
+
+    # Ordens de Serviço
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ordens_servico (
+            id_os INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_cliente INTEGER NOT NULL,
+            id_veiculo INTEGER NOT NULL,
+            data TEXT NOT NULL,
+            km TEXT,
+            defeito_reclamado TEXT,
+            diagnostico TEXT,
+            observacoes TEXT,
+            forma_pagamento TEXT,
+            status TEXT DEFAULT 'Aberta',
+            responsavel TEXT,
+            valor_mao_obra REAL DEFAULT 0,
+            valor_pecas REAL DEFAULT 0,
+            valor_custo_pecas REAL DEFAULT 0,
+            valor_repasse REAL DEFAULT 0,
+            valor_total REAL DEFAULT 0,
+            FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente),
+            FOREIGN KEY (id_veiculo) REFERENCES veiculos(id_veiculo)
+        )
+    """)
+
+    # Peças da OS
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pecas_os (
+            id_peca_os INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_os INTEGER NOT NULL,
+            descricao TEXT NOT NULL,
+            quantidade INTEGER NOT NULL DEFAULT 1,
+            valor_custo_unitario REAL NOT NULL DEFAULT 0,
+            valor_unitario REAL NOT NULL DEFAULT 0,
+            valor_total REAL NOT NULL DEFAULT 0,
+            id_peca INTEGER,
+            FOREIGN KEY (id_os) REFERENCES ordens_servico(id_os)
+        )
+    """)
+
+    # Serviços da OS
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS servicos_os (
+            id_servico INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_os INTEGER NOT NULL,
+            descricao TEXT NOT NULL,
+            valor REAL NOT NULL DEFAULT 0,
+            FOREIGN KEY (id_os) REFERENCES ordens_servico(id_os)
+        )
+    """)
+
+    # Usuários
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
             id_usuario INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
             usuario TEXT NOT NULL UNIQUE,
             senha TEXT NOT NULL,
-            perfil TEXT NOT NULL DEFAULT 'usuario'
+            perfil TEXT NOT NULL DEFAULT 'usuario',
+            senha_temporaria INTEGER NOT NULL DEFAULT 0
         )
     """)
 
-    cursor.execute("PRAGMA table_info(usuarios)")
-    colunas = [linha[1] for linha in cursor.fetchall()]
+    # Peças (Catálogo / Estoque)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pecas (
+            id_peca INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT,
+            nome TEXT NOT NULL,
+            marca TEXT,
+            preco_custo REAL NOT NULL,
+            preco_venda REAL NOT NULL,
+            estoque INTEGER DEFAULT 0,
+            ativo INTEGER DEFAULT 1
+        )
+    """)
 
-    if "senha_temporaria" not in colunas:
-        cursor.execute("""
-            ALTER TABLE usuarios
-            ADD COLUMN senha_temporaria INTEGER NOT NULL DEFAULT 0
-        """)
+    # Despesas / Saídas
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS despesas (
+            id_despesa INTEGER PRIMARY KEY AUTOINCREMENT,
+            data TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            valor REAL NOT NULL,
+            forma_pagamento TEXT,
+            status TEXT DEFAULT 'Pago',
+            observacoes TEXT
+        )
+    """)
+
+    # Migrações graduais de colunas para bancos existentes
+    cursor.execute("PRAGMA table_info(usuarios)")
+    colunas_usr = [linha[1] for linha in cursor.fetchall()]
+    if "senha_temporaria" not in colunas_usr:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN senha_temporaria INTEGER NOT NULL DEFAULT 0")
+
+    cursor.execute("PRAGMA table_info(pecas_os)")
+    colunas_pecas_os = [linha[1] for linha in cursor.fetchall()]
+    if "valor_custo_unitario" not in colunas_pecas_os:
+        cursor.execute("ALTER TABLE pecas_os ADD COLUMN valor_custo_unitario REAL NOT NULL DEFAULT 0")
+    if "id_peca" not in colunas_pecas_os:
+        cursor.execute("ALTER TABLE pecas_os ADD COLUMN id_peca INTEGER")
+
+    cursor.execute("PRAGMA table_info(ordens_servico)")
+    colunas_os = [linha[1] for linha in cursor.fetchall()]
+    if "valor_custo_pecas" not in colunas_os:
+        cursor.execute("ALTER TABLE ordens_servico ADD COLUMN valor_custo_pecas REAL NOT NULL DEFAULT 0")
 
     conexao.commit()
     conexao.close()
 
 
-garantir_tabela_usuarios()
+garantir_tabelas_sistema()
 
 
 # ============================================================
@@ -449,6 +584,186 @@ def excluir_usuario(id_usuario):
 @app.route("/")
 def menu():
     return render_template("menu.html")
+
+
+# ============================================================
+# PEÇAS E ESTOQUE
+# ============================================================
+
+@app.route("/pecas", methods=["GET", "POST"])
+def gerenciar_pecas():
+    mensagem = request.args.get("mensagem", "")
+    sucesso = request.args.get("sucesso", "")
+
+    if request.method == "POST":
+        codigo = request.form.get("codigo", "").strip()
+        nome = request.form.get("nome", "").strip()
+        marca = request.form.get("marca", "").strip()
+        preco_custo = converter_para_float(request.form.get("preco_custo", 0))
+        preco_venda = converter_para_float(request.form.get("preco_venda", 0))
+        try:
+            estoque = int(request.form.get("estoque", "0") or 0)
+        except ValueError:
+            estoque = 0
+
+        if not nome:
+            mensagem = "A descrição da peça é obrigatória."
+        elif preco_custo <= 0:
+            mensagem = "O preço de custo deve ser maior que zero."
+        elif preco_venda <= 0:
+            mensagem = "O preço de venda deve ser maior que zero."
+        else:
+            conexao = conectar_banco()
+            cursor = conexao.cursor()
+            cursor.execute("""
+                INSERT INTO pecas (codigo, nome, marca, preco_custo, preco_venda, estoque, ativo)
+                VALUES (?, ?, ?, ?, ?, ?, 1)
+            """, (codigo, nome, marca, preco_custo, preco_venda, estoque))
+            conexao.commit()
+            conexao.close()
+            return redirect("/pecas?sucesso=Peça+cadastrada+com+sucesso!")
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    cursor.execute("""
+        SELECT id_peca, codigo, nome, marca, preco_custo, preco_venda, estoque
+        FROM pecas
+        WHERE ativo = 1
+        ORDER BY nome COLLATE NOCASE
+    """)
+    lista_pecas = cursor.fetchall()
+    conexao.close()
+
+    return render_template(
+        "pecas.html",
+        pecas=lista_pecas,
+        mensagem=mensagem,
+        sucesso=sucesso
+    )
+
+
+@app.route("/pecas/<int:id_peca>/excluir", methods=["POST"])
+def excluir_peca(id_peca):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    cursor.execute("UPDATE pecas SET ativo = 0 WHERE id_peca = ?", (id_peca,))
+    conexao.commit()
+    conexao.close()
+    return redirect("/pecas?sucesso=Peça+removida+com+sucesso!")
+
+
+@app.route("/api/pecas", methods=["GET"])
+def api_pecas():
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    cursor.execute("""
+        SELECT id_peca, codigo, nome, marca, preco_custo, preco_venda, estoque
+        FROM pecas
+        WHERE ativo = 1
+        ORDER BY nome COLLATE NOCASE
+    """)
+    dados = [
+        {
+            "id": row[0],
+            "codigo": row[1] or "",
+            "nome": row[2],
+            "marca": row[3] or "",
+            "preco_custo": row[4],
+            "preco_venda": row[5],
+            "estoque": row[6]
+        }
+        for row in cursor.fetchall()
+    ]
+    conexao.close()
+    return jsonify(dados)
+
+
+# ============================================================
+# SAÍDAS E DESPESAS DA OFICINA
+# ============================================================
+
+@app.route("/despesas", methods=["GET", "POST"])
+def gerenciar_despesas():
+    mensagem = request.args.get("mensagem", "")
+    sucesso = request.args.get("sucesso", "")
+
+    if request.method == "POST":
+        data = request.form.get("data", "").strip() or datetime.now().strftime("%Y-%m-%d")
+        descricao = request.form.get("descricao", "").strip()
+        categoria = request.form.get("categoria", "Outros").strip()
+        valor = converter_para_float(request.form.get("valor", 0))
+        forma_pagamento = request.form.get("forma_pagamento", "PIX").strip()
+        observacoes = request.form.get("observacoes", "").strip()
+
+        if not descricao:
+            mensagem = "A descrição da despesa é obrigatória."
+        elif valor <= 0:
+            mensagem = "O valor da despesa deve ser maior que zero."
+        else:
+            conexao = conectar_banco()
+            cursor = conexao.cursor()
+            cursor.execute("""
+                INSERT INTO despesas (data, descricao, categoria, valor, forma_pagamento, status, observacoes)
+                VALUES (?, ?, ?, ?, ?, 'Pago', ?)
+            """, (data, descricao, categoria, valor, forma_pagamento, observacoes))
+            conexao.commit()
+            conexao.close()
+            return redirect("/despesas?sucesso=Saída+registrada+com+sucesso!")
+
+    data_inicio = request.args.get("data_inicio", "").strip()
+    data_fim = request.args.get("data_fim", "").strip()
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    if not data_inicio and not data_fim:
+        filtro_data = ""
+        parametros = ()
+    else:
+        if not data_inicio:
+            data_inicio = data_fim
+        if not data_fim:
+            data_fim = data_inicio
+        filtro_data = "WHERE date(data) BETWEEN date(?) AND date(?)"
+        parametros = (data_inicio, data_fim)
+
+    cursor.execute(f"""
+        SELECT id_despesa, data, descricao, categoria, valor, forma_pagamento, status, observacoes
+        FROM despesas
+        {filtro_data}
+        ORDER BY date(data) DESC, id_despesa DESC
+    """, parametros)
+    lista_despesas = cursor.fetchall()
+
+    cursor.execute(f"""
+        SELECT COALESCE(SUM(valor), 0)
+        FROM despesas
+        {filtro_data}
+    """, parametros)
+    total_despesas = cursor.fetchone()[0]
+
+    conexao.close()
+
+    return render_template(
+        "despesas.html",
+        despesas=lista_despesas,
+        total_despesas=total_despesas,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        data_atual=datetime.now().strftime("%Y-%m-%d"),
+        mensagem=mensagem,
+        sucesso=sucesso
+    )
+
+
+@app.route("/despesas/<int:id_despesa>/excluir", methods=["POST"])
+def excluir_despesa(id_despesa):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    cursor.execute("DELETE FROM despesas WHERE id_despesa = ?", (id_despesa,))
+    conexao.commit()
+    conexao.close()
+    return redirect("/despesas?sucesso=Saída+excluída+com+sucesso!")
 
 
 # ============================================================
@@ -1030,6 +1345,10 @@ def nova_os():
             "peca_valor"
         )
 
+        valores_custo = request.form.getlist(
+            "peca_custo"
+        )
+
         servicos = request.form.getlist(
             "servico_descricao"
         )
@@ -1039,6 +1358,7 @@ def nova_os():
         )
 
         total_pecas = 0
+        total_custo_pecas = 0
         total_servicos = 0
 
         for i in range(len(pecas)):
@@ -1046,38 +1366,47 @@ def nova_os():
             if not pecas[i].strip():
                 continue
 
-            quantidade = float(
-                quantidades[i] or 0
+            quantidade = converter_para_float(
+                quantidades[i] if i < len(quantidades) else 1
+            )
+            if quantidade <= 0:
+                quantidade = 1.0
+
+            valor_unitario = converter_para_float(
+                valores_pecas[i] if i < len(valores_pecas) else 0
             )
 
-            valor_unitario = float(
-                valores_pecas[i] or 0
+            valor_custo = converter_para_float(
+                valores_custo[i] if i < len(valores_custo) else 0
             )
 
             total = quantidade * valor_unitario
+            custo_total = quantidade * valor_custo
 
             total_pecas += total
+            total_custo_pecas += custo_total
 
             pecas_salvas.append({
-            "descricao": pecas[i],
-            "quantidade": quantidade,
-            "valor": valor_unitario,
-            "total": total
-        })
+                "descricao": pecas[i].strip(),
+                "quantidade": quantidade,
+                "valor": valor_unitario,
+                "custo": valor_custo,
+                "total": total
+            })
 
         for i in range(len(servicos)):
 
             if not servicos[i].strip():
                 continue
 
-            valor = float(
-                valores_servicos[i] or 0
+            valor = converter_para_float(
+                valores_servicos[i] if i < len(valores_servicos) else 0
             )
 
             total_servicos += valor
 
             servicos_salvos.append({
-                "descricao": servicos[i],
+                "descricao": servicos[i].strip(),
                 "valor": valor
             })
 
@@ -1107,9 +1436,10 @@ def nova_os():
                 valor_mao_obra,
                 valor_pecas,
                 valor_total,
-                valor_repasse
+                valor_repasse,
+                valor_custo_pecas
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             cliente_selecionado,
             veiculo_selecionado,
@@ -1119,7 +1449,8 @@ def nova_os():
             total_servicos,
             total_pecas,
             valor_total,
-            valor_repasse
+            valor_repasse,
+            total_custo_pecas
         ))
 
         id_os = cursor.lastrowid
@@ -1133,15 +1464,17 @@ def nova_os():
                     descricao,
                     quantidade,
                     valor_unitario,
-                    valor_total
+                    valor_total,
+                    valor_custo_unitario
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 id_os,
                 peca["descricao"],
-                int(peca["quantidade"]),
+                peca["quantidade"],
                 peca["valor"],
-                peca["quantidade"] * peca["valor"]
+                peca["total"],
+                peca["custo"]
             ))
 
         for servico in servicos_salvos:
@@ -1192,12 +1525,22 @@ def nova_os():
 
     lista_veiculos = cursor.fetchall()
 
+    cursor.execute("""
+        SELECT id_peca, codigo, nome, marca, preco_custo, preco_venda, estoque
+        FROM pecas
+        WHERE ativo = 1
+        ORDER BY nome COLLATE NOCASE
+    """)
+
+    lista_pecas_catalogo = cursor.fetchall()
+
     conexao.close()
 
     return render_template(
         "os.html",
         clientes=lista_clientes,
         veiculos=lista_veiculos,
+        pecas_catalogo=lista_pecas_catalogo,
         mensagem=mensagem,
         pecas_salvas=pecas_salvas,
         servicos_salvos=servicos_salvos,
@@ -1597,7 +1940,8 @@ def visualizar_os(id_os):
             ordens_servico.valor_pecas,
             ordens_servico.valor_total,
             ordens_servico.valor_repasse,
-            ordens_servico.status
+            ordens_servico.status,
+            COALESCE(ordens_servico.valor_custo_pecas, 0)
         FROM ordens_servico
 
         INNER JOIN clientes
@@ -1624,7 +1968,8 @@ def visualizar_os(id_os):
             descricao,
             quantidade,
             valor_unitario,
-            valor_total
+            valor_total,
+            COALESCE(valor_custo_unitario, 0)
         FROM pecas_os
 
         WHERE id_os = ?
@@ -1649,6 +1994,13 @@ def visualizar_os(id_os):
 
     conexao.close()
 
+    custo_pecas = float(os_dados[16] or 0)
+    total_pecas = float(os_dados[12] or 0)
+    lucro_pecas = total_pecas - custo_pecas
+    total_os = float(os_dados[13] or 0)
+    repasse = float(os_dados[14] or 0)
+    lucro_oficina_os = total_os - repasse - custo_pecas
+
     mensagem = request.args.get(
         "mensagem",
         ""
@@ -1659,6 +2011,9 @@ def visualizar_os(id_os):
         os=os_dados,
         pecas=pecas,
         servicos=servicos,
+        custo_pecas=custo_pecas,
+        lucro_pecas=lucro_pecas,
+        lucro_oficina_os=lucro_oficina_os,
         mensagem=mensagem
     )
 
@@ -2533,6 +2888,10 @@ def editar_os(id_os):
             "peca_valor"
         )
 
+        valores_custo = request.form.getlist(
+            "peca_custo"
+        )
+
         servicos = request.form.getlist(
             "servico_descricao"
         )
@@ -2542,6 +2901,7 @@ def editar_os(id_os):
         )
 
         total_pecas = 0
+        total_custo_pecas = 0
         total_servicos = 0
 
         pecas_salvas = []
@@ -2554,22 +2914,31 @@ def editar_os(id_os):
             if not descricao:
                 continue
 
-            quantidade = float(
-                quantidades[i] or 0
+            quantidade = converter_para_float(
+                quantidades[i] if i < len(quantidades) else 1
+            )
+            if quantidade <= 0:
+                quantidade = 1.0
+
+            valor = converter_para_float(
+                valores_pecas[i] if i < len(valores_pecas) else 0
             )
 
-            valor = float(
-                valores_pecas[i] or 0
+            custo = converter_para_float(
+                valores_custo[i] if i < len(valores_custo) else 0
             )
 
             total = quantidade * valor
+            custo_total = quantidade * custo
 
             total_pecas += total
+            total_custo_pecas += custo_total
 
             pecas_salvas.append({
                 "descricao": descricao,
                 "quantidade": quantidade,
                 "valor": valor,
+                "custo": custo,
                 "total": total
             })
 
@@ -2580,8 +2949,8 @@ def editar_os(id_os):
             if not descricao:
                 continue
 
-            valor = float(
-                valores_servicos[i] or 0
+            valor = converter_para_float(
+                valores_servicos[i] if i < len(valores_servicos) else 0
             )
 
             total_servicos += valor
@@ -2618,7 +2987,8 @@ def editar_os(id_os):
                 valor_pecas = ?,
                 valor_total = ?,
                 valor_repasse = ?,
-                status = ?
+                status = ?,
+                valor_custo_pecas = ?
 
             WHERE id_os = ?
         """, (
@@ -2631,6 +3001,7 @@ def editar_os(id_os):
             valor_total,
             valor_repasse,
             status,
+            total_custo_pecas,
             id_os
         ))
 
@@ -2653,15 +3024,17 @@ def editar_os(id_os):
                     descricao,
                     quantidade,
                     valor_unitario,
-                    valor_total
+                    valor_total,
+                    valor_custo_unitario
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 id_os,
                 peca["descricao"],
-                int(peca["quantidade"]),
+                peca["quantidade"],
                 peca["valor"],
-                peca["total"]
+                peca["total"],
+                peca["custo"]
             ))
 
         for servico in servicos_salvos:
@@ -2716,7 +3089,9 @@ def editar_os(id_os):
         SELECT
             descricao,
             quantidade,
-            valor_unitario
+            valor_unitario,
+            valor_total,
+            COALESCE(valor_custo_unitario, 0)
         FROM pecas_os
         WHERE id_os = ?
         ORDER BY id_peca_os
@@ -2735,6 +3110,14 @@ def editar_os(id_os):
 
     servicos = cursor.fetchall()
 
+    cursor.execute("""
+        SELECT id_peca, codigo, nome, marca, preco_custo, preco_venda, estoque
+        FROM pecas
+        WHERE ativo = 1
+        ORDER BY nome COLLATE NOCASE
+    """)
+    lista_pecas_catalogo = cursor.fetchall()
+
     conexao.close()
 
     return render_template(
@@ -2743,7 +3126,8 @@ def editar_os(id_os):
         clientes=lista_clientes,
         veiculos=lista_veiculos,
         pecas=pecas,
-        servicos=servicos
+        servicos=servicos,
+        pecas_catalogo=lista_pecas_catalogo
     )
 
 
@@ -2837,7 +3221,8 @@ def financeiro():
             COALESCE(SUM(valor_total), 0),
             COALESCE(SUM(valor_pecas), 0),
             COALESCE(SUM(valor_mao_obra), 0),
-            COALESCE(SUM(valor_repasse), 0)
+            COALESCE(SUM(valor_repasse), 0),
+            COALESCE(SUM(valor_custo_pecas), 0)
 
         FROM ordens_servico
 
@@ -2853,11 +3238,45 @@ def financeiro():
     total_pecas = dados[2]
     total_mao_obra = dados[3]
     repasse_henrique = dados[4]
+    total_custo_pecas = dados[5]
 
-    resultado_oficina = (
+    lucro_pecas = total_pecas - total_custo_pecas
+    lucro_bruto_operacional = (
         faturamento -
-        repasse_henrique
+        repasse_henrique -
+        total_custo_pecas
     )
+
+    # ========================================================
+    # DESPESAS / SAÍDAS DO PERÍODO
+    # ========================================================
+
+    filtro_despesas = ""
+    parametros_desp = ()
+    if data_inicio and data_fim:
+        filtro_despesas = "WHERE date(data) BETWEEN date(?) AND date(?)"
+        parametros_desp = (data_inicio, data_fim)
+
+    cursor.execute(f"""
+        SELECT COALESCE(SUM(valor), 0)
+        FROM despesas
+        {filtro_despesas}
+    """, parametros_desp)
+    total_despesas = cursor.fetchone()[0]
+
+    cursor.execute(f"""
+        SELECT
+            categoria,
+            COUNT(*),
+            COALESCE(SUM(valor), 0)
+        FROM despesas
+        {filtro_despesas}
+        GROUP BY categoria
+        ORDER BY SUM(valor) DESC
+    """, parametros_desp)
+    despesas_por_categoria = cursor.fetchall()
+
+    lucro_liquido_real = lucro_bruto_operacional - total_despesas
 
     # ========================================================
     # FATURAMENTO POR FORMA DE PAGAMENTO
@@ -2914,9 +3333,15 @@ def financeiro():
         quantidade_os=quantidade_os,
         faturamento=faturamento,
         total_pecas=total_pecas,
+        total_custo_pecas=total_custo_pecas,
+        lucro_pecas=lucro_pecas,
         total_mao_obra=total_mao_obra,
         repasse_henrique=repasse_henrique,
-        resultado_oficina=resultado_oficina,
+        lucro_bruto_operacional=lucro_bruto_operacional,
+        total_despesas=total_despesas,
+        lucro_liquido_real=lucro_liquido_real,
+        despesas_por_categoria=despesas_por_categoria,
+        resultado_oficina=lucro_liquido_real,
         data_inicio=data_inicio,
         data_fim=data_fim,
         pagamentos=pagamentos,
@@ -2943,7 +3368,8 @@ def dashboard():
             COALESCE(SUM(valor_total), 0),
             COALESCE(SUM(valor_pecas), 0),
             COALESCE(SUM(valor_mao_obra), 0),
-            COALESCE(SUM(valor_repasse), 0)
+            COALESCE(SUM(valor_repasse), 0),
+            COALESCE(SUM(valor_custo_pecas), 0)
         FROM ordens_servico
         WHERE status = 'Finalizada'
     """)
@@ -2955,11 +3381,31 @@ def dashboard():
     total_pecas = dados[2]
     total_mao_obra = dados[3]
     repasse_henrique = dados[4]
+    total_custo_pecas = dados[5]
 
-    resultado_oficina = (
+    lucro_pecas = total_pecas - total_custo_pecas
+    lucro_bruto_operacional = (
         faturamento -
-        repasse_henrique
+        repasse_henrique -
+        total_custo_pecas
     )
+
+    # Total de Despesas gerais
+    cursor.execute("SELECT COALESCE(SUM(valor), 0) FROM despesas")
+    total_despesas = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT
+            categoria,
+            COUNT(*),
+            COALESCE(SUM(valor), 0)
+        FROM despesas
+        GROUP BY categoria
+        ORDER BY SUM(valor) DESC
+    """)
+    despesas_por_categoria = cursor.fetchall()
+
+    lucro_liquido_real = lucro_bruto_operacional - total_despesas
 
     # ========================================================
     # FATURAMENTO POR FORMA DE PAGAMENTO
@@ -3017,9 +3463,15 @@ def dashboard():
         quantidade_os=quantidade_os,
         faturamento=faturamento,
         total_pecas=total_pecas,
+        total_custo_pecas=total_custo_pecas,
+        lucro_pecas=lucro_pecas,
         total_mao_obra=total_mao_obra,
         repasse_henrique=repasse_henrique,
-        resultado_oficina=resultado_oficina,
+        lucro_bruto_operacional=lucro_bruto_operacional,
+        total_despesas=total_despesas,
+        lucro_liquido_real=lucro_liquido_real,
+        despesas_por_categoria=despesas_por_categoria,
+        resultado_oficina=lucro_liquido_real,
 
         pagamentos=pagamentos,
         responsaveis=responsaveis,

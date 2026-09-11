@@ -657,33 +657,41 @@
     </div>
 
 
-    <!-- INFORMAÇÃO INTERNA -->
+    <!-- INFORMAÇÃO INTERNA (OFICINA) -->
 
-    {% if os[9] == "Henrique" %}
+    <div class="interno" style="border-left: 4px solid #d71920; background: #fff8f8; padding: 14px 18px; border-radius: 6px; margin-top: 20px; font-size: 14px;">
 
-    <div class="interno">
-
-        <strong>
-            INFORMAÇÃO INTERNA
+        <strong style="color: #c62828; font-size: 15px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-lock"></i> INFORMAÇÃO INTERNA DA OFICINA
         </strong>
 
-        <br><br>
+        <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+            <div>
+                Responsável pelo Serviço: <strong>{{ os[9] or "Não informado" }}</strong>
+                {% if os[9] == "Henrique" %}
+                    <br>Repasse de Mão de Obra (50%): <strong style="color: #c62828;">R$ {{ "%.2f"|format(os[14]) }}</strong>
+                {% endif %}
+            </div>
 
-        Responsável:
-        <strong>
-            Henrique
-        </strong>
+            <div>
+                Total Venda Peças: <strong>R$ {{ "%.2f"|format(os[12]) }}</strong><br>
+                Custo Real Peças: <strong style="color: #c62828;">R$ {{ "%.2f"|format(custo_pecas) }}</strong><br>
+                Lucro Bruto Peças: <strong style="color: #2e7d32;">R$ {{ "%.2f"|format(lucro_pecas) }}</strong>
+            </div>
 
-        <br>
+            <div style="background: white; padding: 10px; border-radius: 5px; border: 1px solid #e0e0e0;">
+                <span style="font-size: 12px; color: #666; font-weight: bold; text-transform: uppercase;">Lucro da Oficina nesta OS:</span><br>
+                <span style="font-size: 18px; font-weight: bold; color: {% if lucro_oficina_os >= 0 %}#2e7d32{% else %}#c62828{% endif %};">
+                    R$ {{ "%.2f"|format(lucro_oficina_os) }}
+                </span>
+            </div>
+        </div>
 
-        Repasse de mão de obra:
-        <strong>
-            R$ {{ "%.2f"|format(os[14]) }}
-        </strong>
+        <div style="margin-top: 8px; font-size: 12px; color: #777; font-style: italic;">
+            <i class="fa-solid fa-shield-halved"></i> Os valores de custo e repasse acima são estritamente internos e <strong>NUNCA</strong> aparecem no PDF ou WhatsApp do cliente.
+        </div>
 
     </div>
-
-    {% endif %}
 
 
     <!-- BOTÕES -->

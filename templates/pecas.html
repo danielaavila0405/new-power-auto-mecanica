@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peças e Estoque - New Power Auto Mecânica</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        /* CABEÇALHO */
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 140px;
+            height: auto;
+            margin-right: 25px;
+        }
+
+        .dados-oficina { flex: 1; }
+        .dados-oficina h1 { margin: 0 0 6px 0; font-size: 22px; color: #222222; }
+        .dados-oficina p { margin: 4px 0; font-size: 14px; color: #555555; }
+        .whatsapp { font-weight: bold; }
+        .icone-whatsapp { color: #25D366; font-size: 18px; margin-right: 5px; }
+
+        h2 {
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* MENSAGENS */
+        .mensagem {
+            padding: 12px 16px;
+            margin: 15px 0;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .mensagem-sucesso { background-color: #e8f5e9; border-left: 5px solid #2e7d32; color: #2e7d32; }
+        .mensagem-erro { background-color: #ffebee; border-left: 5px solid #c62828; color: #c62828; }
+
+        /* FORMULÁRIO DE CADASTRO */
+        .card-formulario {
+            background: #fdfdfd;
+            border: 1px solid #ddd;
+            border-left: 4px solid #d71920;
+            border-radius: 6px;
+            padding: 18px 20px;
+            margin-bottom: 25px;
+        }
+
+        .card-formulario h3 {
+            margin: 0 0 14px 0;
+            color: #222;
+            font-size: 17px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .grid-campos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .campo {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .campo label {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .campo label .obrigatorio {
+            color: #d71920;
+        }
+
+        .campo input {
+            padding: 9px 11px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .campo input:focus {
+            border-color: #d71920;
+        }
+
+        .info-margem {
+            font-size: 12px;
+            margin-top: 4px;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .botoes-form {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* BARRA DE BUSCA */
+        .busca-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .busca-input-wrap { flex: 1; }
+
+        /* TABELA */
+        .tabela-container {
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #222222;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #dddddd;
+            vertical-align: middle;
+        }
+
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+
+        .preco-custo {
+            color: #b71c1c;
+            font-weight: bold;
+        }
+
+        .preco-venda {
+            color: #1b5e20;
+            font-weight: bold;
+        }
+
+        .badge-lucro {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .botoes-topo {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .botao {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: #d71920;
+            color: white;
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .botao:hover { background-color: #b51218; }
+        .botao-secundario { background-color: #222222; }
+        .botao-secundario:hover { background-color: #444444; }
+
+        .botao-acao {
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            text-decoration: none;
+        }
+
+        .botao-excluir {
+            background-color: #d71920;
+            color: white;
+        }
+
+        .botao-excluir:hover { background-color: #b51218; }
+
+        .vazio {
+            padding: 25px;
+            text-align: center;
+            color: #777;
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .cabecalho { flex-direction: column; text-align: center; }
+            .logo { margin-right: 0; margin-bottom: 10px; }
+            .grid-campos { grid-template-columns: 1fr; }
+            .botoes-topo { flex-direction: column; }
+            .botoes-topo .botao { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+    <div class="cabecalho">
+        <img src="{{ url_for('static', filename='logo.jpg') }}" class="logo" alt="New Power Auto Mecânica">
+        <div class="dados-oficina">
+            <h1>New Power Auto Mecânica</h1>
+            <p>Rua V-3, Qd. V3, Lt. 18 - Vila Rezende - Goiânia/GO</p>
+            <p class="whatsapp">
+                <span class="icone-whatsapp">●</span> (62) 99117-5451
+            </p>
+        </div>
+    </div>
+
+    <!-- BOTÕES SUPERIORES -->
+    <div class="botoes-topo">
+        <a href="/" class="botao botao-secundario">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Menu
+        </a>
+        <a href="/os" class="botao">
+            <i class="fa-solid fa-file-circle-plus"></i> Nova Ordem de Serviço
+        </a>
+        <a href="/financeiro" class="botao botao-secundario">
+            <i class="fa-solid fa-chart-line"></i> Ver Financeiro
+        </a>
+    </div>
+
+    <h2>
+        <span><i class="fa-solid fa-boxes-stacked" style="color: #d71920;"></i> Catálogo de Peças e Estoque</span>
+    </h2>
+
+    <!-- MENSAGENS -->
+    {% if mensagem %}
+        <div class="mensagem mensagem-erro">
+            <i class="fa-solid fa-circle-exclamation"></i> {{ mensagem }}
+        </div>
+    {% endif %}
+
+    {% if sucesso %}
+        <div class="mensagem mensagem-sucesso">
+            <i class="fa-solid fa-circle-check"></i> {{ sucesso }}
+        </div>
+    {% endif %}
+
+    <!-- FORMULÁRIO DE CADASTRO DE PEÇA -->
+    <div class="card-formulario">
+        <h3><i class="fa-solid fa-plus-circle" style="color: #d71920;"></i> Cadastrar Nova Peça</h3>
+        <p style="font-size: 13px; color: #666; margin: 0 0 15px 0;">
+            O <strong>preço de custo</strong> e o <strong>preço de venda</strong> são obrigatórios para permitir a apuração exata do lucro da oficina.
+            <em>(Esses valores de custo nunca aparecem para o cliente no PDF ou WhatsApp).</em>
+        </p>
+
+        <form method="POST" action="/pecas" onsubmit="return validarFormPeca(this);">
+            <div class="grid-campos">
+                <div class="campo">
+                    <label for="nome">Descrição da Peça <span class="obrigatorio">*</span></label>
+                    <input type="text" id="nome" name="nome" required placeholder="Ex: Filtro de Óleo Gol 1.0">
+                </div>
+
+                <div class="campo">
+                    <label for="codigo">Código / Referência</label>
+                    <input type="text" id="codigo" name="codigo" placeholder="Ex: FL-010 / W712">
+                </div>
+
+                <div class="campo">
+                    <label for="marca">Marca / Fabricante</label>
+                    <input type="text" id="marca" name="marca" placeholder="Ex: Tecfil / Bosch">
+                </div>
+
+                <div class="campo">
+                    <label for="preco_custo">Preço de Custo (R$) <span class="obrigatorio">*</span></label>
+                    <input type="number" step="0.01" min="0.01" id="preco_custo" name="preco_custo" required placeholder="0,00" oninput="calcularMargemForm()">
+                </div>
+
+                <div class="campo">
+                    <label for="preco_venda">Preço de Venda (R$) <span class="obrigatorio">*</span></label>
+                    <input type="number" step="0.01" min="0.01" id="preco_venda" name="preco_venda" required placeholder="0,00" oninput="calcularMargemForm()">
+                    <div id="previewMargem" class="info-margem"></div>
+                </div>
+
+                <div class="campo">
+                    <label for="estoque">Qtd em Estoque</label>
+                    <input type="number" id="estoque" name="estoque" value="0" min="0">
+                </div>
+            </div>
+
+            <div class="botoes-form">
+                <button type="submit" class="botao">
+                    <i class="fa-solid fa-floppy-disk"></i> SALVAR PEÇA
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- BUSCA E LISTA DE PEÇAS -->
+    <div class="busca-container">
+        <div class="busca-input-wrap">
+            <input
+                type="text"
+                id="campoBuscaPeca"
+                placeholder="🔍 Buscar peça por código, descrição ou marca..."
+                style="width: 100%; padding: 10px 14px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; outline: none;"
+                onkeyup="filtrarPecasEmTempoReal()"
+            >
+        </div>
+        <button
+            type="button"
+            onclick="limparBuscaPeca()"
+            style="background: #444; color: white; border: none; padding: 10px 14px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px;"
+        >
+            ✕ Limpar
+        </button>
+        <div id="contadorPecas" style="font-size: 13px; color: #555; font-weight: bold; white-space: nowrap;">
+            Total: {{ pecas|length }} peça(s)
+        </div>
+    </div>
+
+    {% if pecas %}
+        <div class="tabela-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Descrição da Peça</th>
+                        <th>Marca</th>
+                        <th>Preço Custo</th>
+                        <th>Preço Venda</th>
+                        <th>Lucro Bruto</th>
+                        <th>Margem</th>
+                        <th>Estoque</th>
+                        <th style="text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPecasCorpo">
+                    {% for p in pecas %}
+                        {% set custo = p[4]|float %}
+                        {% set venda = p[5]|float %}
+                        {% set lucro = venda - custo %}
+                        {% set margem = (lucro / venda * 100) if venda > 0 else 0 %}
+                        <tr class="linha-peca">
+                            <td><strong>{{ p[1] or "-" }}</strong></td>
+                            <td class="col-nome">{{ p[2] }}</td>
+                            <td class="col-marca">{{ p[3] or "-" }}</td>
+                            <td class="preco-custo">R$ {{ "{:,.2f}".format(custo).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                            <td class="preco-venda">R$ {{ "{:,.2f}".format(venda).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                            <td style="color: #2e7d32; font-weight: bold;">R$ {{ "{:,.2f}".format(lucro).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                            <td>
+                                <span class="badge-lucro">{{ "{:.1f}".format(margem) }}%</span>
+                            </td>
+                            <td><strong>{{ p[6] }}</strong> un</td>
+                            <td style="text-align: center;">
+                                <form method="POST" action="/pecas/{{ p[0] }}/excluir" style="display:inline;" onsubmit="return confirm('Deseja realmente excluir a peça {{ p[2] }}?');">
+                                    <button type="submit" class="botao-acao botao-excluir" title="Excluir peça">
+                                        <i class="fa-solid fa-trash"></i> Excluir
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="vazio">
+            <i class="fa-solid fa-box-open" style="font-size: 32px; color: #aaa; margin-bottom: 10px; display: block;"></i>
+            Nenhuma peça cadastrada ainda. Utilize o formulário acima para cadastrar suas primeiras peças!
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+function calcularMargemForm() {
+    const custo = parseFloat(document.getElementById("preco_custo").value) || 0;
+    const venda = parseFloat(document.getElementById("preco_venda").value) || 0;
+    const preview = document.getElementById("previewMargem");
+
+    if (custo > 0 && venda > 0) {
+        const lucro = venda - custo;
+        const margem = (lucro / venda) * 100;
+        preview.innerHTML = `Lucro: R$ ${lucro.toFixed(2).replace('.', ',')} (${margem.toFixed(1)}% de margem)`;
+        if (lucro < 0) {
+            preview.style.color = "#c62828";
+            preview.innerHTML = `Atenção: Preço de venda menor que o custo! Prejuízo de R$ ${Math.abs(lucro).toFixed(2).replace('.', ',')}`;
+        } else {
+            preview.style.color = "#2e7d32";
+        }
+    } else {
+        preview.innerHTML = "";
+    }
+}
+
+function validarFormPeca(form) {
+    const custo = parseFloat(form.preco_custo.value) || 0;
+    const venda = parseFloat(form.preco_venda.value) || 0;
+    if (custo <= 0) {
+        alert("O preço de custo deve ser maior que zero.");
+        form.preco_custo.focus();
+        return false;
+    }
+    if (venda <= 0) {
+        alert("O preço de venda deve ser maior que zero.");
+        form.preco_venda.focus();
+        return false;
+    }
+    return true;
+}
+
+function filtrarPecasEmTempoReal() {
+    const termo = (document.getElementById("campoBuscaPeca").value || "").toLowerCase().trim();
+    const linhas = document.querySelectorAll(".linha-peca");
+    let visiveis = 0;
+
+    linhas.forEach(linha => {
+        const texto = linha.innerText.toLowerCase();
+        if (termo === "" || texto.includes(termo)) {
+            linha.style.display = "";
+            visiveis++;
+        } else {
+            linha.style.display = "none";
+        }
+    });
+
+    const contador = document.getElementById("contadorPecas");
+    if (contador) {
+        contador.innerText = `Mostrando: ${visiveis} de ${linhas.length} peça(s)`;
+    }
+}
+
+function limparBuscaPeca() {
+    const campo = document.getElementById("campoBuscaPeca");
+    if (campo) {
+        campo.value = "";
+        filtrarPecasEmTempoReal();
+    }
+}
+</script>
+
+</body>
+</html>

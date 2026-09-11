@@ -9,6 +9,7 @@
           content="width=device-width, initial-scale=1.0">
 
     <title>Financeiro - New Power Auto Mecânica</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 
     <style>
@@ -334,6 +335,31 @@
             border-top: 4px solid #222222;
         }
 
+        .card-custo {
+            border-top: 4px solid #b71c1c;
+        }
+
+        .card-custo .card-valor {
+            color: #b71c1c;
+        }
+
+        .card-despesas {
+            border-top: 4px solid #c62828;
+        }
+
+        .card-despesas .card-valor {
+            color: #c62828;
+        }
+
+        .card-lucro-real {
+            border-top: 4px solid #2e7d32;
+            background-color: #f1f8e9;
+        }
+
+        .card-lucro-real .card-valor {
+            color: #2e7d32;
+        }
+
 
         /* SEÇÕES */
 
@@ -526,9 +552,19 @@
 
     <!-- TÍTULO -->
 
-    <h2>
-        Financeiro
-    </h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #d71920; padding-bottom: 6px; margin-top: 10px;">
+        <h2 style="margin: 0; border: none; padding: 0;">
+            Financeiro Completo
+        </h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="/pecas" style="background-color: #222222; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;">
+                <i class="fa-solid fa-boxes-stacked"></i> Catálogo de Peças
+            </a>
+            <a href="/despesas" style="background-color: #c62828; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;">
+                <i class="fa-solid fa-receipt"></i> Saídas e Despesas
+            </a>
+        </div>
+    </div>
 
 
     <!-- FILTRO -->
@@ -669,13 +705,45 @@
         <div class="card">
 
             <div class="card-titulo">
-                Total em Peças
+                Peças (Preço Venda)
             </div>
 
             <div class="card-valor">
 
                 R$
                 {{ "{:,.2f}".format(total_pecas).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card card-custo">
+
+            <div class="card-titulo">
+                Custo Real das Peças
+            </div>
+
+            <div class="card-valor">
+
+                R$
+                {{ "{:,.2f}".format(total_custo_pecas).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-titulo">
+                Lucro Bruto em Peças
+            </div>
+
+            <div class="card-valor" style="color: #2e7d32;">
+
+                R$
+                {{ "{:,.2f}".format(lucro_pecas).replace(",", "X").replace(".", ",").replace("X", ".") }}
 
             </div>
 
@@ -714,21 +782,129 @@
         </div>
 
 
-        <div class="card card-resultado">
+        <div class="card card-despesas">
 
             <div class="card-titulo">
-                Resultado da Oficina
+                Saídas / Despesas
             </div>
 
             <div class="card-valor">
 
                 R$
-                {{ "{:,.2f}".format(resultado_oficina).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                {{ "{:,.2f}".format(total_despesas).replace(",", "X").replace(".", ",").replace("X", ".") }}
 
             </div>
 
         </div>
 
+
+        <div class="card card-lucro-real" style="grid-column: 1 / -1;">
+
+            <div class="card-titulo" style="font-size: 15px; color: #1b5e20;">
+                <i class="fa-solid fa-chart-line"></i> LUCRO LÍQUIDO REAL DA OFICINA
+                <span style="font-size: 12px; font-weight: normal; color: #555555; display: block; margin-top: 3px;">
+                    (Faturamento - Custo Peças - Repasse Henrique - Saídas/Despesas)
+                </span>
+            </div>
+
+            <div class="card-valor" style="font-size: 28px;">
+
+                R$
+                {{ "{:,.2f}".format(lucro_liquido_real).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- SAÍDAS E DESPESAS POR CATEGORIA -->
+
+    <div class="secao">
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; border: none; padding: 0;">
+                Saídas e Despesas por Categoria
+            </h3>
+            <a href="/despesas" style="background-color: #c62828; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                <i class="fa-solid fa-plus"></i> Nova Despesa
+            </a>
+        </div>
+
+        <div class="tabela-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Categoria
+                        </th>
+
+                        <th>
+                            Quantidade de Lançamentos
+                        </th>
+
+                        <th>
+                            Total Gasto
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% if despesas_por_categoria %}
+
+                        {% for desp in despesas_por_categoria %}
+
+                            <tr>
+
+                                <td>
+                                    <strong>{{ desp[0] }}</strong>
+                                </td>
+
+                                <td>
+                                    {{ desp[1] }}
+                                </td>
+
+                                <td class="valor" style="color: #c62828;">
+
+                                    R$
+                                    {{ "{:,.2f}".format(desp[2]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <tr>
+
+                            <td colspan="3"
+                                style="text-align: center; color: #666666;">
+
+                                Nenhuma despesa registrada no período.
+
+                            </td>
+
+                        </tr>
+
+                    {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </div>
 
