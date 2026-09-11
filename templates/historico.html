@@ -278,46 +278,38 @@
             action="/historico"
         >
 
-            <label>
-                Selecione o veículo pela placa
+            <label for="campoPlaca">
+                Digite a placa ou selecione da lista:
             </label>
 
-            <div class="busca-linha">
+            <div class="busca-linha" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
 
-                <select
-                    name="placa"
-                    required
-                >
-
-                    <option value="">
-                        Selecione a placa
-                    </option>
-
-                    {% for veiculo_item in veiculos %}
-
-                    <option
-                        value="{{ veiculo_item[1] }}"
-                        {% if placa == veiculo_item[1] %}
-                            selected
-                        {% endif %}
+                <div style="flex: 1; min-width: 250px;">
+                    <input
+                        type="text"
+                        id="campoPlaca"
+                        name="placa"
+                        list="listaVeiculos"
+                        value="{{ placa or '' }}"
+                        placeholder="Ex: ABC1D23 (ou busque por modelo/cliente)"
+                        style="width: 100%; padding: 11px 14px; border: 2px solid #ccc; border-radius: 6px; font-size: 15px; text-transform: uppercase; box-sizing: border-box;"
+                        required
+                        autocomplete="off"
                     >
 
-                        {{ veiculo_item[1] }}
-                        -
-                        {{ veiculo_item[2] }}
-                        {{ veiculo_item[3] }}
-
-                    </option>
-
-                    {% endfor %}
-
-                </select>
+                    <datalist id="listaVeiculos">
+                        {% for veiculo_item in veiculos %}
+                        <option value="{{ veiculo_item[1] }}">{{ veiculo_item[1] }} - {{ veiculo_item[2] }} {{ veiculo_item[3] }} ({{ veiculo_item[5] }})</option>
+                        {% endfor %}
+                    </datalist>
+                </div>
 
                 <button
                     type="submit"
                     class="botao"
+                    style="white-space: nowrap; padding: 11px 20px;"
                 >
-                    CONSULTAR HISTÓRICO
+                    🔍 CONSULTAR HISTÓRICO
                 </button>
 
             </div>

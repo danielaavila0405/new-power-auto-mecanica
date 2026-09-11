@@ -495,23 +495,55 @@ def inicio():
 @app.route("/clientes")
 def clientes():
 
+    busca = request.args.get("busca", "").strip()
+
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
-    cursor.execute("""
-        SELECT
-            clientes.id_cliente,
-            clientes.nome,
-            clientes.telefone,
-            veiculos.id_veiculo,
-            veiculos.placa,
-            veiculos.marca,
-            veiculos.modelo
-        FROM clientes
-        LEFT JOIN veiculos
-            ON clientes.id_cliente = veiculos.id_cliente
-        ORDER BY clientes.nome
-    """)
+    if busca:
+        parametro_busca = f"%{busca}%"
+        cursor.execute("""
+            SELECT
+                clientes.id_cliente,
+                clientes.nome,
+                clientes.telefone,
+                veiculos.id_veiculo,
+                veiculos.placa,
+                veiculos.marca,
+                veiculos.modelo
+            FROM clientes
+            LEFT JOIN veiculos
+                ON clientes.id_cliente = veiculos.id_cliente
+            WHERE clientes.nome LIKE ?
+               OR clientes.telefone LIKE ?
+               OR veiculos.placa LIKE ?
+               OR veiculos.modelo LIKE ?
+               OR veiculos.marca LIKE ?
+               OR clientes.cpf_cnpj LIKE ?
+            ORDER BY clientes.nome
+        """, (
+            parametro_busca,
+            parametro_busca,
+            parametro_busca,
+            parametro_busca,
+            parametro_busca,
+            parametro_busca
+        ))
+    else:
+        cursor.execute("""
+            SELECT
+                clientes.id_cliente,
+                clientes.nome,
+                clientes.telefone,
+                veiculos.id_veiculo,
+                veiculos.placa,
+                veiculos.marca,
+                veiculos.modelo
+            FROM clientes
+            LEFT JOIN veiculos
+                ON clientes.id_cliente = veiculos.id_cliente
+            ORDER BY clientes.nome
+        """)
 
     lista_clientes = cursor.fetchall()
 
@@ -524,7 +556,8 @@ def clientes():
         "clientes.html",
         clientes=lista_clientes,
         mensagem=mensagem,
-        tipo_mensagem=tipo_mensagem
+        tipo_mensagem=tipo_mensagem,
+        busca=busca
     )
 
 
@@ -1416,6 +1449,8 @@ def historico():
 
     if placa:
 
+        placa_limpa = re.sub(r"[^A-Z0-9]", "", placa)
+
         cursor.execute("""
             SELECT
                 veiculos.id_veiculo,
@@ -1431,12 +1466,47 @@ def historico():
                 ON veiculos.id_cliente =
                    clientes.id_cliente
 
-            WHERE UPPER(veiculos.placa) = ?
+            WHERE UPPER(REPLACE(REPLACE(veiculos.placa, '-', ''), ' ', '')) = ?
+               OR UPPER(veiculos.placa) = ?
 
             LIMIT 1
-        """, (placa,))
+        """, (placa_limpa, placa))
 
         veiculo = cursor.fetchone()
+
+        # Se não encontrou por placa exata, busca por aproximação (modelo, marca ou cliente)
+        if not veiculo:
+            termo_aproximado = f"%{placa}%"
+            cursor.execute("""
+                SELECT
+                    veiculos.id_veiculo,
+                    veiculos.placa,
+                    veiculos.marca,
+                    veiculos.modelo,
+                    veiculos.ano,
+                    clientes.nome,
+                    clientes.telefone
+                FROM veiculos
+
+                INNER JOIN clientes
+                    ON veiculos.id_cliente =
+                       clientes.id_cliente
+
+                WHERE clientes.nome LIKE ?
+                   OR veiculos.modelo LIKE ?
+                   OR veiculos.marca LIKE ?
+                   OR veiculos.placa LIKE ?
+
+                ORDER BY veiculos.id_veiculo DESC
+                LIMIT 1
+            """, (
+                termo_aproximado,
+                termo_aproximado,
+                termo_aproximado,
+                termo_aproximado
+            ))
+
+            veiculo = cursor.fetchone()
 
         if veiculo:
 

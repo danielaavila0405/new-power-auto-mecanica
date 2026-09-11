@@ -301,6 +301,33 @@
     {% endif %}
 
 
+    <!-- BARRA DE BUSCA -->
+    <div style="margin: 15px 0 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 250px;">
+            <input
+                type="text"
+                id="campoBuscaCliente"
+                value="{{ busca or '' }}"
+                placeholder="🔍 Buscar por nome, telefone, placa ou modelo do veículo..."
+                style="width: 100%; padding: 11px 14px; border: 2px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; box-sizing: border-box;"
+                onfocus="this.style.borderColor='#d71920'"
+                onblur="this.style.borderColor='#ccc'"
+                onkeyup="filtrarClientesEmTempoReal()"
+            >
+        </div>
+        <button
+            type="button"
+            onclick="limparBuscaClientes()"
+            style="background: #444; color: white; border: none; padding: 11px 18px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;"
+        >
+            ✕ Limpar
+        </button>
+        <div id="contadorClientes" style="font-size: 14px; color: #555; font-weight: bold;">
+            Total: {{ clientes|length }} cliente(s)
+        </div>
+    </div>
+
+
     <!-- LISTA DE CLIENTES -->
 
     {% if clientes %}
@@ -330,11 +357,11 @@
                 </thead>
 
 
-                <tbody>
+                <tbody id="tabelaClientesCorpo">
 
                     {% for cliente in clientes %}
 
-                        <tr>
+                        <tr class="linha-cliente">
 
                             <td>
                                 {{ cliente[1] }}
@@ -425,6 +452,10 @@
 
         </div>
 
+        <p id="semResultadosBusca" style="display: none; text-align: center; padding: 25px; color: #777; font-size: 15px; font-style: italic; background: #fafafa; border-radius: 6px; border: 1px dashed #ccc; margin-top: 15px;">
+            Nenhum cliente ou veículo encontrado para esse termo de busca.
+        </p>
+
     {% else %}
 
         <div class="vazio">
@@ -467,6 +498,58 @@
 
 
 </div>
+
+<script>
+function filtrarClientesEmTempoReal() {
+    const input = document.getElementById("campoBuscaCliente");
+    if (!input) return;
+
+    const filtro = input.value.trim().toLowerCase();
+    const linhas = document.querySelectorAll(".linha-cliente");
+    const contador = document.getElementById("contadorClientes");
+    const msgVazia = document.getElementById("semResultadosBusca");
+
+    let visiveis = 0;
+
+    linhas.forEach(function(linha) {
+        const texto = linha.textContent.toLowerCase();
+        if (filtro === "" || texto.indexOf(filtro) > -1) {
+            linha.style.display = "";
+            visiveis++;
+        } else {
+            linha.style.display = "none";
+        }
+    });
+
+    if (contador) {
+        if (filtro === "") {
+            contador.textContent = "Total: " + linhas.length + " cliente(s)";
+        } else {
+            contador.textContent = "Exibindo " + visiveis + " de " + linhas.length;
+        }
+    }
+
+    if (msgVazia) {
+        msgVazia.style.display = (visiveis === 0 && linhas.length > 0) ? "block" : "none";
+    }
+}
+
+function limparBuscaClientes() {
+    const input = document.getElementById("campoBuscaCliente");
+    if (input) {
+        input.value = "";
+        filtrarClientesEmTempoReal();
+        input.focus();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const input = document.getElementById("campoBuscaCliente");
+    if (input && input.value.trim() !== "") {
+        filtrarClientesEmTempoReal();
+    }
+});
+</script>
 
 </body>
 
