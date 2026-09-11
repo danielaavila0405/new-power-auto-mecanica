@@ -1098,10 +1098,11 @@ def nova_os():
             ))
 
         conexao.commit()
+        conexao.close()
 
-        mensagem = (
-            f"Ordem de Serviço nº {id_os} "
-            f"cadastrada com sucesso!"
+        return redirect(
+            f"/os/{id_os}?mensagem="
+            f"Ordem de Serviço nº {id_os} cadastrada com sucesso!"
         )
 
     cursor.execute("""
