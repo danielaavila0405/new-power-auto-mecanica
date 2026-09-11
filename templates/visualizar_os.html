@@ -745,18 +745,6 @@
         const telefoneCliente = {{ os[3] | tojson }};
         const nomeCliente = {{ os[2] | tojson }};
         const numeroOS = {{ os[0] | tojson }};
-        const dataOS = {{ os[1] | tojson }};
-        const placa = {{ os[5] | tojson }};
-        const marca = {{ os[6] | tojson }};
-        const modelo = {{ os[7] | tojson }};
-        const ano = {{ os[8] | tojson }};
-        const statusOS = {{ os[15] | tojson }};
-        const valorMaoObra = {{ os[11] | tojson }};
-        const valorPecas = {{ os[12] | tojson }};
-        const valorTotal = {{ os[13] | tojson }};
-        const formaPagamento = {{ os[10] | tojson }};
-        const servicos = {{ servicos | tojson }};
-        const pecas = {{ pecas | tojson }};
 
         // Remove tudo que não for número
         let telefone = String(telefoneCliente || "").replace(/\D/g, "");
@@ -770,81 +758,12 @@
             telefone = "55" + telefone;
         }
 
-        const fmtMoeda = function(num) {
-            return Number(num || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-        };
-
-        // Formatar data
-        let dataFormatada = "";
-        if (dataOS && dataOS.length >= 10) {
-            dataFormatada = dataOS.substring(0, 10).split("-").reverse().join("/");
-        }
-
-        // Informações do veículo
-        let veiculoPartes = [];
-        if (marca) veiculoPartes.push(marca);
-        if (modelo) veiculoPartes.push(modelo);
-        let veiculoTexto = veiculoPartes.join(" ");
-
-        let detalhesCarro = [];
-        if (placa) detalhesCarro.push("Placa: " + placa);
-        if (ano) detalhesCarro.push("Ano: " + ano);
-
-        if (detalhesCarro.length > 0) {
-            veiculoTexto += " (" + detalhesCarro.join(" - ") + ")";
-        }
-
-        // Montagem da mensagem estruturada
-        let msg = "🔧 *NEW POWER AUTO MECÂNICA*\n";
-        msg += "📋 *ORDEM DE SERVIÇO Nº " + numeroOS + "*\n";
-        msg += "━━━━━━━━━━━━━━━━━━━━━\n";
-        msg += "👤 *Cliente:* " + (nomeCliente || "") + "\n";
-
-        if (veiculoTexto.trim() !== "") {
-            msg += "🚗 *Veículo:* " + veiculoTexto + "\n";
-        }
-
-        if (dataFormatada) {
-            msg += "📅 *Data:* " + dataFormatada + "\n";
-        }
-
-        if (statusOS) {
-            msg += "📌 *Status:* " + statusOS + "\n";
-        }
-
-        // Serviços
-        if (servicos && servicos.length > 0) {
-            msg += "\n⚙️ *SERVIÇOS REALIZADOS:*\n";
-            servicos.forEach(function(s) {
-                msg += "• " + s[0] + " - " + fmtMoeda(s[1]) + "\n";
-            });
-        }
-
-        // Peças
-        if (pecas && pecas.length > 0) {
-            msg += "\n🔩 *PEÇAS / PRODUTOS:*\n";
-            pecas.forEach(function(p) {
-                let qtd = p[1] ? p[1] + "x " : "";
-                msg += "• " + qtd + p[0] + " - " + fmtMoeda(p[3]) + "\n";
-            });
-        }
-
-        msg += "\n━━━━━━━━━━━━━━━━━━━━━\n";
-        if (Number(valorMaoObra) > 0) {
-            msg += "💰 *Mão de Obra:* " + fmtMoeda(valorMaoObra) + "\n";
-        }
-        if (Number(valorPecas) > 0) {
-            msg += "📦 *Peças:* " + fmtMoeda(valorPecas) + "\n";
-        }
-        if (formaPagamento) {
-            msg += "💳 *Forma de Pagamento:* " + formaPagamento + "\n";
-        }
-        msg += "💵 *VALOR TOTAL: " + fmtMoeda(valorTotal) + "*\n";
-        msg += "━━━━━━━━━━━━━━━━━━━━━\n\n";
-
         const urlPdf = window.location.origin + "/os/" + numeroOS + "/pdf";
-        msg += "📄 *Acesse a 2ª via da sua OS em PDF:*\n" + urlPdf + "\n\n";
-        msg += "_Agradecemos a preferência e a confiança! Qualquer dúvida estamos à disposição._";
+
+        let msg = "Olá, " + (nomeCliente || "") + "!\n\n";
+        msg += "Segue o link para visualizar sua Ordem de Serviço nº " + numeroOS + " da New Power Auto Mecânica:\n";
+        msg += urlPdf + "\n\n";
+        msg += "Agradecemos a preferência e a confiança! Qualquer dúvida estamos à disposição.";
 
         const url = "https://wa.me/" + telefone + "?text=" + encodeURIComponent(msg);
 
