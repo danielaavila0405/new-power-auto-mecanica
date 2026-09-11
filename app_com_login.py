@@ -112,7 +112,7 @@ garantir_tabela_usuarios()
 def verificar_login():
 
     # Rotas que podem ser acessadas sem login.
-    if request.endpoint in ("login", "esqueci_senha"):
+    if request.endpoint in ("login", "esqueci_senha", "gerar_pdf_os"):
         return
 
     if request.endpoint == "static":
