@@ -38,6 +38,13 @@
             width: 140px;
             height: auto;
             margin-right: 25px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .logo:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
         }
 
         .dados-oficina { flex: 1; }
@@ -269,7 +276,9 @@
 
     <!-- CABEÇALHO -->
     <div class="cabecalho">
-        <img src="{{ url_for('static', filename='logo.jpg') }}" class="logo" alt="New Power Auto Mecânica">
+        <a href="/" title="Ir para o Menu Principal">
+            <img src="{{ url_for('static', filename='logo.jpg') }}" class="logo" alt="New Power Auto Mecânica">
+        </a>
         <div class="dados-oficina">
             <h1>New Power Auto Mecânica</h1>
             <p>Rua V-3, Qd. V3, Lt. 18 - Vila Rezende - Goiânia/GO</p>

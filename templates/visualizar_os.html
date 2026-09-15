@@ -48,6 +48,13 @@
         .logo {
             width: 150px;
             margin-right: 25px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .logo:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
         }
 
         .dados-oficina {
@@ -274,11 +281,13 @@
 
     <div class="cabecalho">
 
-        <img
-            src="{{ url_for('static', filename='logo.jpg') }}"
-            class="logo"
-            alt="New Power Auto Mecânica"
-        >
+        <a href="/" title="Ir para o Menu Principal">
+            <img
+                src="{{ url_for('static', filename='logo.jpg') }}"
+                class="logo"
+                alt="New Power Auto Mecânica"
+            >
+        </a>
 
         <div class="dados-oficina">
 

@@ -30,6 +30,12 @@
             width: 110px;
             height: auto;
             margin-bottom: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        .logo:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
         }
         h1 {
             margin: 0;
@@ -168,7 +174,9 @@
 <body>
 
     <div class="card">
-        <img src="{{ url_for('static', filename='logo.jpg') }}" class="logo" alt="New Power Auto Mecânica">
+        <a href="/" title="Ir para a Página Inicial">
+            <img src="{{ url_for('static', filename='logo.jpg') }}" class="logo" alt="New Power Auto Mecânica">
+        </a>
         <h1>Recuperação de Senha</h1>
         <div class="subtitulo">Sistema New Power Auto Mecânica</div>
 

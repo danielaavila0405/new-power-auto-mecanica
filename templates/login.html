@@ -42,6 +42,13 @@
             width: 120px;
             height: auto;
             margin-bottom: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .logo:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
         }
 
         h1 {
@@ -124,11 +131,13 @@
 
     <div class="card">
 
-        <img
-            src="{{ url_for('static', filename='logo.jpg') }}"
-            class="logo"
-            alt="New Power Auto Mecânica"
-        >
+        <a href="/" title="New Power Auto Mecânica">
+            <img
+                src="{{ url_for('static', filename='logo.jpg') }}"
+                class="logo"
+                alt="New Power Auto Mecânica"
+            >
+        </a>
 
         <h1>
             New Power Auto Mecânica
