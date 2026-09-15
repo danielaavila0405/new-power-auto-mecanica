@@ -57,6 +57,27 @@ CAMINHO_BANCO = os.environ.get(
 banco = Path(CAMINHO_BANCO)
 banco.parent.mkdir(parents=True, exist_ok=True)
 
+# ============================================================
+# CONFIGURAÇÃO DA API DE CONSULTA DE PLACAS
+# ============================================================
+caminho_env = pasta_projeto / ".env"
+if caminho_env.exists():
+    try:
+        with open(caminho_env, encoding="utf-8") as f_env:
+            for linha_env in f_env:
+                linha_env = linha_env.strip()
+                if linha_env and not linha_env.startswith("#") and "=" in linha_env:
+                    chave_env, valor_env = linha_env.split("=", 1)
+                    chave_env = chave_env.strip()
+                    valor_env = valor_env.strip().strip("'").strip('"')
+                    if chave_env and chave_env not in os.environ:
+                        os.environ[chave_env] = valor_env
+    except Exception:
+        pass
+
+PLACA_API_TOKEN = os.environ.get("PLACA_API_TOKEN", "333fb39054a3024b0d77f9b390389ef5")
+PLACA_API_PROVIDER = os.environ.get("PLACA_API_PROVIDER", "wdapi").lower()
+
 
 def conectar_banco():
     conexao = sqlite3.connect(banco)
@@ -221,6 +242,11 @@ def garantir_tabelas_sistema():
     colunas_os = [linha[1] for linha in cursor.fetchall()]
     if "valor_custo_pecas" not in colunas_os:
         cursor.execute("ALTER TABLE ordens_servico ADD COLUMN valor_custo_pecas REAL NOT NULL DEFAULT 0")
+
+    cursor.execute("PRAGMA table_info(veiculos)")
+    colunas_veic = [linha[1] for linha in cursor.fetchall()]
+    if "cor" not in colunas_veic:
+        cursor.execute("ALTER TABLE veiculos ADD COLUMN cor TEXT")
 
     conexao.commit()
     conexao.close()
@@ -1081,6 +1107,136 @@ def novo_cliente_os():
         "nome": nome,
         "telefone": telefone
     })
+
+
+# ============================================================
+# CONSULTA DE PLACA VEICULAR (API NACIONAL E BANCO LOCAL)
+# ============================================================
+
+@app.route("/api/consulta-placa/<placa>", methods=["GET"])
+def consulta_placa(placa):
+
+    if "usuario_id" not in session:
+        return jsonify({"sucesso": False, "mensagem": "Usuário não autenticado."}), 401
+
+    placa_limpa = re.sub(r"[^a-zA-Z0-9]", "", placa).strip().upper()
+
+    if len(placa_limpa) != 7:
+        return jsonify({
+            "sucesso": False,
+            "mensagem": "Placa inválida. Deve conter 7 caracteres alfanuméricos."
+        }), 400
+
+    # 1. Verificar primeiro no banco de dados local (veículos já cadastrados na oficina)
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+        cursor.execute("""
+            SELECT marca, modelo, ano, cor
+            FROM veiculos
+            WHERE UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?
+            ORDER BY id_veiculo DESC
+            LIMIT 1
+        """, (placa_limpa,))
+        veiculo_local = cursor.fetchone()
+        conexao.close()
+
+        if veiculo_local and veiculo_local[0] and veiculo_local[1]:
+            return jsonify({
+                "sucesso": True,
+                "origem": "banco_local",
+                "dados": {
+                    "placa": placa_limpa,
+                    "marca": veiculo_local[0],
+                    "modelo": veiculo_local[1],
+                    "ano": str(veiculo_local[2]) if veiculo_local[2] else "",
+                    "cor": str(veiculo_local[3]) if veiculo_local[3] else ""
+                }
+            })
+    except Exception as erro_banco:
+        print(f"Aviso ao consultar placa no banco local: {erro_banco}")
+
+    # 2. Requisição à API externa (Api Placas / WDAPI)
+    token_atual = os.environ.get("PLACA_API_TOKEN", PLACA_API_TOKEN)
+    if not token_atual:
+        return jsonify({
+            "sucesso": False,
+            "sem_token": True,
+            "mensagem": "Token da API de placas não configurado."
+        })
+
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+
+        if PLACA_API_PROVIDER == "wdapi":
+            url = f"https://wdapi2.com.br/consulta/{placa_limpa}/{token_atual}"
+        else:
+            url = f"https://placa-fipe.apicarros.com/v1/consulta/{placa_limpa}/{token_atual}"
+
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=7) as resposta:
+            corpo = resposta.read().decode("utf-8")
+            dados_api = json.loads(corpo)
+
+        marca = ""
+        modelo = ""
+        ano = ""
+        cor = ""
+
+        if PLACA_API_PROVIDER == "wdapi":
+            marca = str(dados_api.get("MARCA") or dados_api.get("marca") or "").strip()
+            modelo = str(dados_api.get("MODELO") or dados_api.get("modelo") or "").strip()
+            ano = str(dados_api.get("anoModelo") or dados_api.get("ANO") or dados_api.get("ano") or "").strip()
+            cor = str(dados_api.get("COR") or dados_api.get("cor") or "").strip()
+        else:
+            marca = str(dados_api.get("marca") or "").strip()
+            modelo = str(dados_api.get("modelo") or "").strip()
+            ano = str(dados_api.get("anoModelo") or dados_api.get("ano") or "").strip()
+            cor = str(dados_api.get("cor") or "").strip()
+
+        if not marca and not modelo:
+            msg = dados_api.get("mensagemRetorno") or dados_api.get("message") or "Placa não localizada na base nacional."
+            return jsonify({
+                "sucesso": False,
+                "mensagem": msg
+            })
+
+        return jsonify({
+            "sucesso": True,
+            "origem": "api",
+            "dados": {
+                "placa": placa_limpa,
+                "marca": marca.title(),
+                "modelo": modelo.title(),
+                "ano": ano,
+                "cor": cor.title() if cor else ""
+            }
+        })
+
+    except urllib.error.HTTPError as erro_http:
+        if erro_http.code in (401, 403):
+            return jsonify({
+                "sucesso": False,
+                "mensagem": "Token da API expirado ou limite atingido."
+            })
+        elif erro_http.code == 404:
+            return jsonify({
+                "sucesso": False,
+                "mensagem": "Placa não encontrada no cadastro nacional."
+            })
+        else:
+            return jsonify({
+                "sucesso": False,
+                "mensagem": f"Erro no serviço de placas (Código {erro_http.code})."
+            })
+    except Exception as erro_conexao:
+        print(f"Erro ao consultar API de placa: {erro_conexao}")
+        return jsonify({
+            "sucesso": False,
+            "mensagem": "Não foi possível conectar ao serviço de placas no momento. Preencha manualmente."
+        })
 
 
 # ============================================================
