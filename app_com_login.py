@@ -5,6 +5,7 @@ from flask import (
     redirect,
     jsonify,
     send_file,
+    send_from_directory,
     session
 )
 import sqlite3
@@ -263,7 +264,7 @@ garantir_tabelas_sistema()
 def verificar_login():
 
     # Rotas que podem ser acessadas sem login.
-    if request.endpoint in ("login", "esqueci_senha", "gerar_pdf_os"):
+    if request.endpoint in ("login", "esqueci_senha", "gerar_pdf_os", "favicon"):
         return
 
     if request.endpoint == "static":
@@ -280,6 +281,11 @@ def verificar_login():
         "logout",
     ):
         return redirect("/alterar-senha")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(pasta_projeto / "static", "favicon.ico", mimetype="image/vnd.microsoft.icon")
 
 
 # ============================================================
