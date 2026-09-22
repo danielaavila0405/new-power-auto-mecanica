@@ -7,7 +7,8 @@ from flask import (
     send_file,
     send_from_directory,
     session,
-    g
+    g,
+    Response
 )
 import sqlite3
 import os
@@ -17,17 +18,20 @@ import logging
 from logging.handlers import RotatingFileHandler
 import json
 import re
+import csv
+import io
+import xml.etree.ElementTree as ET
 import urllib.request
 import urllib.error
 import urllib.parse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from io import BytesIO
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import (
@@ -38,6 +42,7 @@ from reportlab.platypus import (
     TableStyle,
     Image
 )
+from reportlab.pdfgen import canvas
 
 app = Flask(__name__)
 
@@ -851,6 +856,7 @@ def excluir_usuario(id_usuario):
 # ============================================================
 
 @app.route("/")
+@app.route("/menu")
 def menu():
     return render_template("menu.html")
 
@@ -4324,6 +4330,962 @@ def backups_download_atual():
     except Exception as e:
         logger.error(f"Erro ao gerar snapshot atual do banco: {e}", exc_info=True)
         return f"Erro ao processar download do banco atual: {e}", 500
+
+
+# ============================================================
+# CENTRAL DE RELATÓRIOS E EXPORTAÇÃO (PDF, EXCEL/CSV, XML, JSON)
+# ============================================================
+
+def formatar_moeda_br(valor):
+    if valor is None:
+        return "R$ 0,00"
+    try:
+        val = float(valor)
+    except (ValueError, TypeError):
+        return "R$ 0,00"
+    return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def formatar_data_br(data_iso):
+    if not data_iso:
+        return ""
+    try:
+        partes = str(data_iso).split(" ")[0].split("-")
+        if len(partes) == 3:
+            return f"{partes[2]}/{partes[1]}/{partes[0]}"
+    except Exception:
+        pass
+    return str(data_iso)
+
+
+class NumberedCanvasRelatorios(canvas.Canvas):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_decorations(num_pages)
+            canvas.Canvas.showPage(self)
+        canvas.Canvas.save(self)
+
+    def draw_page_decorations(self, page_count):
+        self.saveState()
+        self.setFont("Helvetica", 8)
+        self.setFillColor(colors.HexColor("#777777"))
+        width, height = self._pagesize
+
+        # Linha divisória do rodapé
+        self.setStrokeColor(colors.HexColor("#dddddd"))
+        self.setLineWidth(0.5)
+        self.line(12 * mm, 11 * mm, width - 12 * mm, 11 * mm)
+
+        agora = datetime.now().strftime("%d/%m/%Y às %H:%M:%S")
+        texto_esq = f"New Power Auto Mecânica • Relatório Gerencial Confidencial • Emitido em {agora}"
+        texto_dir = f"Página {self._pageNumber} de {page_count}"
+
+        self.drawString(12 * mm, 7 * mm, texto_esq)
+        self.drawRightString(width - 12 * mm, 7 * mm, texto_dir)
+        self.restoreState()
+
+
+def obter_dados_relatorio_servicos(data_inicio="", data_fim=""):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    filtro_data = ""
+    parametros = []
+    if data_inicio and data_fim:
+        filtro_data = "AND date(os.data) BETWEEN date(?) AND date(?)"
+        parametros = [data_inicio, data_fim]
+    elif data_inicio:
+        filtro_data = "AND date(os.data) >= date(?)"
+        parametros = [data_inicio]
+    elif data_fim:
+        filtro_data = "AND date(os.data) <= date(?)"
+        parametros = [data_fim]
+
+    cursor.execute(f"""
+        SELECT
+            os.id_os,
+            os.data,
+            COALESCE(c.nome, 'Não informado') AS cliente,
+            COALESCE(v.placa, 'S/ Placa') AS placa,
+            COALESCE(v.modelo, '') AS modelo,
+            s.descricao AS servico,
+            COALESCE(s.executante, 'Não informado') AS executante,
+            COALESCE(s.valor, 0) AS valor,
+            COALESCE(s.valor_repasse, 0) AS valor_repasse
+        FROM servicos_os s
+        JOIN ordens_servico os ON s.id_os = os.id_os
+        LEFT JOIN clientes c ON os.id_cliente = c.id_cliente
+        LEFT JOIN veiculos v ON os.id_veiculo = v.id_veiculo
+        WHERE os.status = 'Finalizada'
+        {filtro_data}
+        ORDER BY os.data DESC, os.id_os DESC
+    """, parametros)
+
+    linhas = cursor.fetchall()
+    conexao.close()
+
+    total_servicos = len(linhas)
+    total_faturado = sum(float(r[7]) for r in linhas)
+    total_repasses = sum(float(r[8]) for r in linhas)
+    saldo_oficina = total_faturado - total_repasses
+
+    return {
+        "linhas": linhas,
+        "totais": {
+            "total_servicos": total_servicos,
+            "total_faturado": total_faturado,
+            "total_repasses": total_repasses,
+            "saldo_oficina": saldo_oficina
+        }
+    }
+
+
+def obter_dados_relatorio_pecas(data_inicio="", data_fim=""):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    filtro_data = ""
+    parametros = []
+    if data_inicio and data_fim:
+        filtro_data = "AND date(os.data) BETWEEN date(?) AND date(?)"
+        parametros = [data_inicio, data_fim]
+    elif data_inicio:
+        filtro_data = "AND date(os.data) >= date(?)"
+        parametros = [data_inicio]
+    elif data_fim:
+        filtro_data = "AND date(os.data) <= date(?)"
+        parametros = [data_fim]
+
+    cursor.execute(f"""
+        SELECT
+            os.id_os,
+            os.data,
+            p.descricao AS peca,
+            p.quantidade,
+            COALESCE(p.valor_unitario, 0) AS valor_unitario,
+            COALESCE(p.valor_custo_unitario, 0) AS valor_custo_unitario,
+            COALESCE(p.valor_total, 0) AS total_venda,
+            (p.quantidade * COALESCE(p.valor_custo_unitario, 0)) AS total_custo,
+            (COALESCE(p.valor_total, 0) - (p.quantidade * COALESCE(p.valor_custo_unitario, 0))) AS lucro_bruto
+        FROM pecas_os p
+        JOIN ordens_servico os ON p.id_os = os.id_os
+        WHERE os.status = 'Finalizada'
+        {filtro_data}
+        ORDER BY os.data DESC, os.id_os DESC
+    """, parametros)
+
+    linhas = cursor.fetchall()
+    conexao.close()
+
+    total_itens = sum(float(r[3]) for r in linhas)
+    total_faturado_pecas = sum(float(r[6]) for r in linhas)
+    total_custo_pecas = sum(float(r[7]) for r in linhas)
+    lucro_total_pecas = sum(float(r[8]) for r in linhas)
+    margem_pecas = (lucro_total_pecas / total_faturado_pecas * 100) if total_faturado_pecas > 0 else 0.0
+
+    return {
+        "linhas": linhas,
+        "totais": {
+            "total_registros": len(linhas),
+            "total_itens": total_itens,
+            "total_faturado_pecas": total_faturado_pecas,
+            "total_custo_pecas": total_custo_pecas,
+            "lucro_total_pecas": lucro_total_pecas,
+            "margem_pecas": margem_pecas
+        }
+    }
+
+
+def obter_dados_relatorio_prestadores(data_inicio="", data_fim=""):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    filtro_data = ""
+    parametros = []
+    if data_inicio and data_fim:
+        filtro_data = "AND date(os.data) BETWEEN date(?) AND date(?)"
+        parametros = [data_inicio, data_fim]
+    elif data_inicio:
+        filtro_data = "AND date(os.data) >= date(?)"
+        parametros = [data_inicio]
+    elif data_fim:
+        filtro_data = "AND date(os.data) <= date(?)"
+        parametros = [data_fim]
+
+    cursor.execute(f"""
+        SELECT
+            COALESCE(s.executante, 'Não informado') AS prestador,
+            COUNT(s.id_servico) AS qtd_servicos,
+            COALESCE(SUM(s.valor), 0) AS total_faturado,
+            COALESCE(SUM(s.valor_repasse), 0) AS total_repasse,
+            COALESCE(SUM(s.valor) - SUM(s.valor_repasse), 0) AS retido_oficina
+        FROM servicos_os s
+        JOIN ordens_servico os ON s.id_os = os.id_os
+        WHERE os.status = 'Finalizada'
+        {filtro_data}
+        GROUP BY s.executante
+        ORDER BY total_faturado DESC
+    """, parametros)
+
+    linhas = cursor.fetchall()
+    conexao.close()
+
+    total_servicos = sum(int(r[1]) for r in linhas)
+    total_faturado = sum(float(r[2]) for r in linhas)
+    total_repasses = sum(float(r[3]) for r in linhas)
+    total_retido = sum(float(r[4]) for r in linhas)
+
+    return {
+        "linhas": linhas,
+        "totais": {
+            "total_prestadores": len(linhas),
+            "total_servicos": total_servicos,
+            "total_faturado": total_faturado,
+            "total_repasses": total_repasses,
+            "total_retido": total_retido
+        }
+    }
+
+
+def obter_dados_relatorio_financeiro(data_inicio="", data_fim=""):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    filtro_os = ""
+    filtro_desp = ""
+    parametros = []
+    if data_inicio and data_fim:
+        filtro_os = "AND date(data) BETWEEN date(?) AND date(?)"
+        filtro_desp = "WHERE date(data) BETWEEN date(?) AND date(?)"
+        parametros = [data_inicio, data_fim]
+    elif data_inicio:
+        filtro_os = "AND date(data) >= date(?)"
+        filtro_desp = "WHERE date(data) >= date(?)"
+        parametros = [data_inicio]
+    elif data_fim:
+        filtro_os = "AND date(data) <= date(?)"
+        filtro_desp = "WHERE date(data) <= date(?)"
+        parametros = [data_fim]
+
+    # Resumo das OSs
+    cursor.execute(f"""
+        SELECT
+            COUNT(*),
+            COALESCE(SUM(valor_total), 0),
+            COALESCE(SUM(valor_pecas), 0),
+            COALESCE(SUM(valor_mao_obra), 0),
+            COALESCE(SUM(valor_repasse), 0),
+            COALESCE(SUM(valor_custo_pecas), 0)
+        FROM ordens_servico
+        WHERE status = 'Finalizada'
+        {filtro_os}
+    """, parametros)
+    dados_os = cursor.fetchone()
+
+    qtd_os = dados_os[0]
+    faturamento_total = dados_os[1]
+    faturamento_pecas = dados_os[2]
+    faturamento_mao_obra = dados_os[3]
+    total_repasses = dados_os[4]
+    custo_pecas = dados_os[5]
+
+    lucro_pecas = faturamento_pecas - custo_pecas
+    lucro_bruto_operacional = faturamento_total - total_repasses - custo_pecas
+
+    # Despesas do período
+    cursor.execute(f"""
+        SELECT COALESCE(SUM(valor), 0)
+        FROM despesas
+        {filtro_desp}
+    """, parametros)
+    total_despesas = cursor.fetchone()[0]
+
+    # Despesas agrupadas por categoria
+    cursor.execute(f"""
+        SELECT
+            categoria,
+            COUNT(*),
+            COALESCE(SUM(valor), 0)
+        FROM despesas
+        {filtro_desp}
+        GROUP BY categoria
+        ORDER BY SUM(valor) DESC
+    """, parametros)
+    despesas_categorias = cursor.fetchall()
+
+    lucro_liquido_real = lucro_bruto_operacional - total_despesas
+
+    # Lista individual de despesas
+    cursor.execute(f"""
+        SELECT
+            id_despesa,
+            data,
+            categoria,
+            descricao,
+            COALESCE(valor, 0)
+        FROM despesas
+        {filtro_desp}
+        ORDER BY data DESC, id_despesa DESC
+    """, parametros)
+    lista_despesas = cursor.fetchall()
+
+    conexao.close()
+
+    return {
+        "qtd_os": qtd_os,
+        "faturamento_total": faturamento_total,
+        "faturamento_pecas": faturamento_pecas,
+        "faturamento_mao_obra": faturamento_mao_obra,
+        "total_repasses": total_repasses,
+        "custo_pecas": custo_pecas,
+        "lucro_pecas": lucro_pecas,
+        "lucro_bruto_operacional": lucro_bruto_operacional,
+        "total_despesas": total_despesas,
+        "lucro_liquido_real": lucro_liquido_real,
+        "despesas_categorias": despesas_categorias,
+        "lista_despesas": lista_despesas
+    }
+
+
+def gerar_csv_relatorio(colunas, linhas_dados, nome_arquivo):
+    """
+    Gera CSV no padrão brasileiro para Excel:
+    - Delimitador ';'
+    - UTF-8 com BOM (utf-8-sig)
+    """
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(colunas)
+    for linha in linhas_dados:
+        writer.writerow(linha)
+
+    conteudo_bytes = output.getvalue().encode("utf-8-sig")
+    return Response(
+        conteudo_bytes,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'}
+    )
+
+
+def gerar_xml_relatorio(tipo, periodo_str, colunas, linhas_dados, totais, nome_arquivo):
+    """
+    Gera XML estruturado para sistemas contábeis, ERPs ou pipelines de BI.
+    """
+    raiz = ET.Element("relatorio", tipo=tipo, gerado_em=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    oficina_el = ET.SubElement(raiz, "oficina")
+    ET.SubElement(oficina_el, "nome").text = "New Power Auto Mecânica"
+    ET.SubElement(oficina_el, "telefone").text = "(62) 99117-5451"
+    ET.SubElement(oficina_el, "endereco").text = "Rua V-3, Qd. V3, Lt. 18 - Vila Rezende - Goiânia/GO"
+
+    periodo_el = ET.SubElement(raiz, "periodo")
+    periodo_el.text = periodo_str
+
+    if totais:
+        totais_el = ET.SubElement(raiz, "totais")
+        for chave, val in totais.items():
+            tag_limpa = re.sub(r"[^a-zA-Z0-9_]", "_", str(chave).lower()).strip("_")
+            ET.SubElement(totais_el, tag_limpa).text = str(val)
+
+    itens_el = ET.SubElement(raiz, "itens")
+    tags_colunas = [re.sub(r"[^a-zA-Z0-9_]", "_", str(col).lower()).strip("_") for col in colunas]
+
+    for linha in linhas_dados:
+        item_el = ET.SubElement(itens_el, "item")
+        for i, val in enumerate(linha):
+            tag = tags_colunas[i] if i < len(tags_colunas) else f"coluna_{i+1}"
+            ET.SubElement(item_el, tag).text = str(val) if val is not None else ""
+
+    xml_bytes = ET.tostring(raiz, encoding="utf-8", xml_declaration=True)
+    return Response(
+        xml_bytes,
+        mimetype="application/xml; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'}
+    )
+
+
+def gerar_pdf_relatorio_gerencial(tipo, titulo, colunas, col_larguras, linhas_formatadas, totais_cards, periodo_str, nome_arquivo):
+    """
+    Gera PDF diagramado no padrão executivo da New Power usando ReportLab.
+    """
+    buffer = io.BytesIO()
+
+    # Landscape para tabelas largas (servicos e pecas), portrait para prestadores e financeiro
+    usar_landscape = tipo in ("mao-de-obra", "pecas")
+    tamanho_pagina = landscape(A4) if usar_landscape else A4
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=tamanho_pagina,
+        leftMargin=12 * mm,
+        rightMargin=12 * mm,
+        topMargin=12 * mm,
+        bottomMargin=14 * mm
+    )
+
+    estilos = getSampleStyleSheet()
+
+    estilo_titulo_empresa = ParagraphStyle(
+        "TituloEmpresaRel",
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        leading=17,
+        textColor=colors.HexColor("#222222")
+    )
+    estilo_sub_empresa = ParagraphStyle(
+        "SubEmpresaRel",
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#555555")
+    )
+    estilo_titulo_relatorio = ParagraphStyle(
+        "TituloRelatorioDoc",
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        leading=15,
+        textColor=colors.HexColor("#d71920"),
+        alignment=2
+    )
+    estilo_periodo = ParagraphStyle(
+        "PeriodoRelatorioDoc",
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#444444"),
+        alignment=2
+    )
+
+    elementos = []
+
+    # Cabeçalho
+    caminho_logo = pasta_projeto / "static" / "logo.jpg"
+    bloco_logo = []
+    if caminho_logo.exists():
+        bloco_logo = [Image(str(caminho_logo), width=32 * mm, height=20 * mm)]
+
+    info_oficina = [
+        Paragraph("NEW POWER AUTO MECÂNICA", estilo_titulo_empresa),
+        Paragraph("Rua V-3, Qd. V3, Lt. 18 - Vila Rezende - Goiânia/GO • Tel: (62) 99117-5451", estilo_sub_empresa)
+    ]
+
+    info_titulo = [
+        Paragraph(titulo.upper(), estilo_titulo_relatorio),
+        Paragraph(f"Período: {periodo_str}", estilo_periodo)
+    ]
+
+    largura_total = 273 * mm if usar_landscape else 186 * mm
+    if bloco_logo:
+        cabecalho_tab = Table([[bloco_logo[0], info_oficina, info_titulo]], colWidths=[36 * mm, largura_total - 116 * mm, 80 * mm])
+    else:
+        cabecalho_tab = Table([[info_oficina, info_titulo]], colWidths=[largura_total - 85 * mm, 85 * mm])
+
+    cabecalho_tab.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    elementos.append(cabecalho_tab)
+    elementos.append(Spacer(1, 4 * mm))
+
+    # Cards / Caixa de Totais do Relatório
+    if totais_cards:
+        linha_titulos = []
+        linha_valores = []
+        for c in totais_cards:
+            linha_titulos.append(Paragraph(f"<b>{c['titulo'].upper()}</b>", ParagraphStyle("THKpiRel", fontName="Helvetica-Bold", fontSize=7.5, textColor=colors.HexColor("#555555"), alignment=1)))
+            linha_valores.append(Paragraph(f"<b>{c['valor']}</b>", ParagraphStyle("TKpiRel", fontName="Helvetica-Bold", fontSize=10.5, textColor=colors.HexColor(c.get("cor", "#222222")), alignment=1)))
+        
+        tab_totais = Table([linha_titulos, linha_valores], colWidths=[largura_total / len(totais_cards)] * len(totais_cards))
+        tab_totais.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8f9fa")),
+            ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#dddddd")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e5e5e5")),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ]))
+        elementos.append(tab_totais)
+        elementos.append(Spacer(1, 5 * mm))
+
+    # Tabela de Dados
+    estilo_th = ParagraphStyle("THDRel", fontName="Helvetica-Bold", fontSize=7.5, textColor=colors.white, alignment=1)
+    estilo_td = ParagraphStyle("TDDRel", fontName="Helvetica", fontSize=7, leading=9, textColor=colors.HexColor("#222222"))
+    estilo_td_num = ParagraphStyle("TDDNumRel", fontName="Helvetica", fontSize=7, leading=9, textColor=colors.HexColor("#222222"), alignment=2)
+    estilo_td_center = ParagraphStyle("TDDCenterRel", fontName="Helvetica", fontSize=7, leading=9, textColor=colors.HexColor("#222222"), alignment=1)
+
+    headers_cells = [Paragraph(f"<b>{c}</b>", estilo_th) for c in colunas]
+    linhas_tabela = [headers_cells]
+
+    for row in linhas_formatadas:
+        row_cells = []
+        for i, val in enumerate(row):
+            texto = str(val) if val is not None else ""
+            if "R$" in texto or (isinstance(val, (int, float)) and not str(val).startswith("#")):
+                row_cells.append(Paragraph(texto, estilo_td_num))
+            elif texto.startswith("#") or (len(texto) <= 10 and "/" in texto):
+                row_cells.append(Paragraph(texto, estilo_td_center))
+            else:
+                row_cells.append(Paragraph(texto, estilo_td))
+        linhas_tabela.append(row_cells)
+
+    larguras_pt = [l * mm for l in col_larguras]
+    tab_dados = Table(linhas_tabela, colWidths=larguras_pt, repeatRows=1)
+    tab_dados.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#222222")),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e0e0e0")),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fbfbfb")]),
+    ]))
+    elementos.append(tab_dados)
+
+    doc.build(elementos, canvasmaker=NumberedCanvasRelatorios)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=nome_arquivo
+    )
+
+
+@app.route("/relatorios")
+def relatorios():
+    tipo = request.args.get("tipo", "mao-de-obra").strip().lower()
+    data_inicio = request.args.get("data_inicio", "").strip()
+    data_fim = request.args.get("data_fim", "").strip()
+
+    if data_inicio and data_fim:
+        periodo_fmt = f"{formatar_data_br(data_inicio)} até {formatar_data_br(data_fim)}"
+    elif data_inicio:
+        periodo_fmt = f"A partir de {formatar_data_br(data_inicio)}"
+    elif data_fim:
+        periodo_fmt = f"Até {formatar_data_br(data_fim)}"
+    else:
+        periodo_fmt = "Todo o Período Cadastrado"
+
+    if tipo == "pecas":
+        titulo_relatorio = "Peças & Margem de Lucro"
+        dados = obter_dados_relatorio_pecas(data_inicio, data_fim)
+        tot = dados["totais"]
+        kpis = [
+            {"titulo": "Total Faturado em Peças", "valor": formatar_moeda_br(tot["total_faturado_pecas"]), "cor_classe": "kpi-azul"},
+            {"titulo": "Custo Total das Peças", "valor": formatar_moeda_br(tot["total_custo_pecas"]), "cor_classe": "kpi-vermelho"},
+            {"titulo": "Lucro Bruto em Peças", "valor": formatar_moeda_br(tot["lucro_total_pecas"]), "cor_classe": "kpi-verde"},
+            {"titulo": "Margem de Lucro", "valor": f"{tot['margem_pecas']:.1f}%", "cor_classe": "kpi-verde", "subtitulo": f"{tot['total_itens']:.0f} itens vendidos"}
+        ]
+        colunas = [
+            {"nome": "OS", "alinhamento": "center"},
+            {"nome": "Data", "alinhamento": "center"},
+            {"nome": "Peça", "alinhamento": "left"},
+            {"nome": "Qtd", "alinhamento": "center"},
+            {"nome": "Venda Unit.", "alinhamento": "right"},
+            {"nome": "Custo Unit.", "alinhamento": "right"},
+            {"nome": "Total Venda", "alinhamento": "right"},
+            {"nome": "Total Custo", "alinhamento": "right"},
+            {"nome": "Lucro Bruto", "alinhamento": "right"}
+        ]
+        colunas_direita = [4, 5, 6, 7, 8]
+        colunas_centro = [0, 1, 3]
+        itens_formatados = []
+        for r in dados["linhas"]:
+            itens_formatados.append([
+                f"#{r[0]:04d}",
+                formatar_data_br(r[1]),
+                r[2],
+                f"{r[3]:g}",
+                formatar_moeda_br(r[4]),
+                formatar_moeda_br(r[5]),
+                formatar_moeda_br(r[6]),
+                formatar_moeda_br(r[7]),
+                formatar_moeda_br(r[8])
+            ])
+
+    elif tipo == "prestadores":
+        titulo_relatorio = "Produtividade da Equipe & Parceiros"
+        dados = obter_dados_relatorio_prestadores(data_inicio, data_fim)
+        tot = dados["totais"]
+        kpis = [
+            {"titulo": "Mecânicos / Parceiros", "valor": str(tot["total_prestadores"]), "cor_classe": "kpi-azul"},
+            {"titulo": "Serviços Executados", "valor": str(tot["total_servicos"]), "cor_classe": "kpi-azul"},
+            {"titulo": "Faturamento Produzido", "valor": formatar_moeda_br(tot["total_faturado"]), "cor_classe": "kpi-verde"},
+            {"titulo": "Repasses a Pagar", "valor": formatar_moeda_br(tot["total_repasses"]), "cor_classe": "kpi-vermelho", "subtitulo": f"Saldo oficina: {formatar_moeda_br(tot['total_retido'])}"}
+        ]
+        colunas = [
+            {"nome": "Profissional / Parceiro", "alinhamento": "left"},
+            {"nome": "Qtd Serviços", "alinhamento": "center"},
+            {"nome": "Total Faturado", "alinhamento": "right"},
+            {"nome": "Repasse Devido", "alinhamento": "right"},
+            {"nome": "Retido pela Oficina", "alinhamento": "right"}
+        ]
+        colunas_direita = [2, 3, 4]
+        colunas_centro = [1]
+        itens_formatados = []
+        for r in dados["linhas"]:
+            itens_formatados.append([
+                r[0],
+                str(r[1]),
+                formatar_moeda_br(r[2]),
+                formatar_moeda_br(r[3]),
+                formatar_moeda_br(r[4])
+            ])
+
+    elif tipo == "financeiro":
+        titulo_relatorio = "Fechamento Financeiro / DRE Consolidado"
+        dados = obter_dados_relatorio_financeiro(data_inicio, data_fim)
+        kpis = [
+            {"titulo": "Faturamento Bruto", "valor": formatar_moeda_br(dados["faturamento_total"]), "cor_classe": "kpi-azul", "subtitulo": f"{dados['qtd_os']} ordens de serviço"},
+            {"titulo": "Custos (Peças + Repasses)", "valor": formatar_moeda_br(dados["custo_pecas"] + dados["total_repasses"]), "cor_classe": "kpi-vermelho"},
+            {"titulo": "Despesas Operacionais", "valor": formatar_moeda_br(dados["total_despesas"]), "cor_classe": "kpi-vermelho"},
+            {"titulo": "Lucro Líquido Real", "valor": formatar_moeda_br(dados["lucro_liquido_real"]), "cor_classe": "kpi-verde" if dados["lucro_liquido_real"] >= 0 else "kpi-vermelho"}
+        ]
+        colunas = [
+            {"nome": "Data", "alinhamento": "center"},
+            {"nome": "Tipo / Categoria", "alinhamento": "left"},
+            {"nome": "Descrição do Lançamento", "alinhamento": "left"},
+            {"nome": "Valor da Despesa", "alinhamento": "right"}
+        ]
+        colunas_direita = [3]
+        colunas_centro = [0]
+        itens_formatados = []
+        for r in dados["lista_despesas"]:
+            itens_formatados.append([
+                formatar_data_br(r[1]),
+                r[2],
+                r[3],
+                formatar_moeda_br(r[4])
+            ])
+
+    else:
+        # Default: mão de obra
+        tipo = "mao-de-obra"
+        titulo_relatorio = "Mão de Obra & Serviços Executados"
+        dados = obter_dados_relatorio_servicos(data_inicio, data_fim)
+        tot = dados["totais"]
+        kpis = [
+            {"titulo": "Serviços Executados", "valor": str(tot["total_servicos"]), "cor_classe": "kpi-azul"},
+            {"titulo": "Total em Mão de Obra", "valor": formatar_moeda_br(tot["total_faturado"]), "cor_classe": "kpi-azul"},
+            {"titulo": "Repasses da Equipe", "valor": formatar_moeda_br(tot["total_repasses"]), "cor_classe": "kpi-vermelho"},
+            {"titulo": "Retido pela Oficina", "valor": formatar_moeda_br(tot["saldo_oficina"]), "cor_classe": "kpi-verde"}
+        ]
+        colunas = [
+            {"nome": "OS", "alinhamento": "center"},
+            {"nome": "Data", "alinhamento": "center"},
+            {"nome": "Cliente", "alinhamento": "left"},
+            {"nome": "Veículo", "alinhamento": "left"},
+            {"nome": "Serviço", "alinhamento": "left"},
+            {"nome": "Executante", "alinhamento": "left"},
+            {"nome": "Valor", "alinhamento": "right"},
+            {"nome": "Repasse", "alinhamento": "right"}
+        ]
+        colunas_direita = [6, 7]
+        colunas_centro = [0, 1]
+        itens_formatados = []
+        for r in dados["linhas"]:
+            itens_formatados.append([
+                f"#{r[0]:04d}",
+                formatar_data_br(r[1]),
+                r[2],
+                f"{r[3]} {r[4]}".strip(),
+                r[5],
+                r[6],
+                formatar_moeda_br(r[7]),
+                formatar_moeda_br(r[8])
+            ])
+
+    return render_template(
+        "relatorios.html",
+        tipo=tipo,
+        titulo_relatorio=titulo_relatorio,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        periodo_formatado=periodo_fmt,
+        kpis=kpis,
+        colunas=colunas,
+        colunas_alinhadas_direita=colunas_direita,
+        colunas_alinhadas_centro=colunas_centro,
+        itens=itens_formatados
+    )
+
+
+@app.route("/relatorios/<tipo>/<formato>")
+def exportar_relatorio(tipo, formato):
+    tipo = tipo.strip().lower()
+    formato = formato.strip().lower()
+
+    if tipo not in ("mao-de-obra", "pecas", "prestadores", "financeiro"):
+        return "Tipo de relatório inválido.", 400
+
+    if formato not in ("pdf", "csv", "xml"):
+        return "Formato de exportação inválido. Use 'pdf', 'csv' ou 'xml'.", 400
+
+    data_inicio = request.args.get("data_inicio", "").strip()
+    data_fim = request.args.get("data_fim", "").strip()
+
+    if data_inicio and data_fim:
+        periodo_fmt = f"{formatar_data_br(data_inicio)} até {formatar_data_br(data_fim)}"
+        sufixo_data = f"{data_inicio}_{data_fim}"
+    elif data_inicio:
+        periodo_fmt = f"A partir de {formatar_data_br(data_inicio)}"
+        sufixo_data = f"desde_{data_inicio}"
+    elif data_fim:
+        periodo_fmt = f"Até {formatar_data_br(data_fim)}"
+        sufixo_data = f"ate_{data_fim}"
+    else:
+        periodo_fmt = "Todo o Período"
+        sufixo_data = "completo"
+
+    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    if tipo == "mao-de-obra":
+        titulo = "Relatório de Mão de Obra e Serviços"
+        dados = obter_dados_relatorio_servicos(data_inicio, data_fim)
+        tot = dados["totais"]
+        colunas = ["OS", "Data", "Cliente", "Veículo", "Serviço", "Executante", "Valor (R$)", "Repasse (R$)"]
+        col_larguras = [18, 22, 45, 40, 60, 40, 24, 24] # mm
+        totais_cards = [
+            {"titulo": "Total Serviços", "valor": str(tot["total_servicos"])},
+            {"titulo": "Faturamento Mão de Obra", "valor": formatar_moeda_br(tot["total_faturado"]), "cor": "#0d6efd"},
+            {"titulo": "Total Repasses Equipe", "valor": formatar_moeda_br(tot["total_repasses"]), "cor": "#dc3545"},
+            {"titulo": "Saldo Oficina", "valor": formatar_moeda_br(tot["saldo_oficina"]), "cor": "#198754"}
+        ]
+        linhas_dados = []
+        for r in dados["linhas"]:
+            linhas_dados.append([
+                f"#{r[0]:04d}",
+                formatar_data_br(r[1]),
+                r[2],
+                f"{r[3]} {r[4]}".strip(),
+                r[5],
+                r[6],
+                f"{float(r[7]):.2f}".replace(".", ","),
+                f"{float(r[8]):.2f}".replace(".", ",")
+            ])
+        nome_base = f"relatorio_mao_de_obra_{sufixo_data}_{timestamp_str}"
+
+    elif tipo == "pecas":
+        titulo = "Relatório de Peças e Lucratividade"
+        dados = obter_dados_relatorio_pecas(data_inicio, data_fim)
+        tot = dados["totais"]
+        colunas = ["OS", "Data", "Peça", "Qtd", "Venda Unit.", "Custo Unit.", "Total Venda", "Total Custo", "Lucro Bruto"]
+        col_larguras = [16, 20, 52, 14, 26, 26, 28, 28, 28] # mm
+        totais_cards = [
+            {"titulo": "Total Faturado Peças", "valor": formatar_moeda_br(tot["total_faturado_pecas"]), "cor": "#0d6efd"},
+            {"titulo": "Custo das Peças", "valor": formatar_moeda_br(tot["total_custo_pecas"]), "cor": "#dc3545"},
+            {"titulo": "Lucro Bruto Peças", "valor": formatar_moeda_br(tot["lucro_total_pecas"]), "cor": "#198754"},
+            {"titulo": "Margem de Lucro", "valor": f"{tot['margem_pecas']:.1f}%", "cor": "#198754"}
+        ]
+        linhas_dados = []
+        for r in dados["linhas"]:
+            linhas_dados.append([
+                f"#{r[0]:04d}",
+                formatar_data_br(r[1]),
+                r[2],
+                f"{r[3]:g}",
+                f"{float(r[4]):.2f}".replace(".", ","),
+                f"{float(r[5]):.2f}".replace(".", ","),
+                f"{float(r[6]):.2f}".replace(".", ","),
+                f"{float(r[7]):.2f}".replace(".", ","),
+                f"{float(r[8]):.2f}".replace(".", ",")
+            ])
+        nome_base = f"relatorio_pecas_margem_{sufixo_data}_{timestamp_str}"
+
+    elif tipo == "prestadores":
+        titulo = "Relatório de Produtividade da Equipe e Parceiros"
+        dados = obter_dados_relatorio_prestadores(data_inicio, data_fim)
+        tot = dados["totais"]
+        colunas = ["Profissional / Parceiro", "Qtd Serviços", "Total Faturado (R$)", "Repasse Devido (R$)", "Retido Oficina (R$)"]
+        col_larguras = [65, 25, 32, 32, 32] # mm (portrait total 186mm)
+        totais_cards = [
+            {"titulo": "Profissionais Ativos", "valor": str(tot["total_prestadores"])},
+            {"titulo": "Serviços Realizados", "valor": str(tot["total_servicos"])},
+            {"titulo": "Faturamento Produzido", "valor": formatar_moeda_br(tot["total_faturado"]), "cor": "#0d6efd"},
+            {"titulo": "Repasses a Pagar", "valor": formatar_moeda_br(tot["total_repasses"]), "cor": "#dc3545"}
+        ]
+        linhas_dados = []
+        for r in dados["linhas"]:
+            linhas_dados.append([
+                r[0],
+                str(r[1]),
+                f"{float(r[2]):.2f}".replace(".", ","),
+                f"{float(r[3]):.2f}".replace(".", ","),
+                f"{float(r[4]):.2f}".replace(".", ",")
+            ])
+        nome_base = f"relatorio_equipe_repasses_{sufixo_data}_{timestamp_str}"
+
+    elif tipo == "financeiro":
+        titulo = "Extrato Financeiro e DRE da Oficina"
+        dados = obter_dados_relatorio_financeiro(data_inicio, data_fim)
+        colunas = ["Data", "Categoria da Despesa", "Descrição do Lançamento", "Valor (R$)"]
+        col_larguras = [25, 45, 80, 36] # mm (portrait total 186mm)
+        totais_cards = [
+            {"titulo": "Faturamento Bruto", "valor": formatar_moeda_br(dados["faturamento_total"]), "cor": "#0d6efd"},
+            {"titulo": "Custos (Peças + Repasses)", "valor": formatar_moeda_br(dados["custo_pecas"] + dados["total_repasses"]), "cor": "#dc3545"},
+            {"titulo": "Despesas Gerais", "valor": formatar_moeda_br(dados["total_despesas"]), "cor": "#dc3545"},
+            {"titulo": "Lucro Líquido Real", "valor": formatar_moeda_br(dados["lucro_liquido_real"]), "cor": "#198754" if dados["lucro_liquido_real"] >= 0 else "#dc3545"}
+        ]
+        linhas_dados = []
+        for r in dados["lista_despesas"]:
+            linhas_dados.append([
+                formatar_data_br(r[1]),
+                r[2],
+                r[3],
+                f"{float(r[4]):.2f}".replace(".", ",")
+            ])
+        nome_base = f"fechamento_financeiro_dre_{sufixo_data}_{timestamp_str}"
+
+    usuario_logado = session.get("usuario", "anonimo")
+    logger.info(f"Exportação de relatório gerada: tipo='{tipo}', formato='{formato}', periodo='{periodo_fmt}', user='{usuario_logado}'")
+
+    if formato == "pdf":
+        return gerar_pdf_relatorio_gerencial(
+            tipo=tipo,
+            titulo=titulo,
+            colunas=colunas,
+            col_larguras=col_larguras,
+            linhas_formatadas=linhas_dados,
+            totais_cards=totais_cards,
+            periodo_str=periodo_fmt,
+            nome_arquivo=f"{nome_base}.pdf"
+        )
+    elif formato == "csv":
+        return gerar_csv_relatorio(
+            colunas=colunas,
+            linhas_dados=linhas_dados,
+            nome_arquivo=f"{nome_base}.csv"
+        )
+    elif formato == "xml":
+        totais_dict = {c["titulo"]: c["valor"] for c in totais_cards}
+        return gerar_xml_relatorio(
+            tipo=tipo,
+            periodo_str=periodo_fmt,
+            colunas=colunas,
+            linhas_dados=linhas_dados,
+            totais=totais_dict,
+            nome_arquivo=f"{nome_base}.xml"
+        )
+
+
+@app.route("/api/relatorios/<tipo>")
+def api_relatorios(tipo):
+    """
+    Endpoint JSON REST para consumo de dashboards externos, Power BI,
+    mobile apps ou automações.
+    """
+    tipo = tipo.strip().lower()
+    data_inicio = request.args.get("data_inicio", "").strip()
+    data_fim = request.args.get("data_fim", "").strip()
+
+    if tipo == "mao-de-obra":
+        dados = obter_dados_relatorio_servicos(data_inicio, data_fim)
+        linhas_json = [
+            {
+                "id_os": r[0],
+                "data": r[1],
+                "cliente": r[2],
+                "placa": r[3],
+                "modelo": r[4],
+                "servico": r[5],
+                "executante": r[6],
+                "valor": float(r[7]),
+                "valor_repasse": float(r[8])
+            }
+            for r in dados["linhas"]
+        ]
+        return jsonify({
+            "status": "sucesso",
+            "tipo": tipo,
+            "periodo": {"data_inicio": data_inicio, "data_fim": data_fim},
+            "totais": dados["totais"],
+            "registros": linhas_json
+        })
+
+    elif tipo == "pecas":
+        dados = obter_dados_relatorio_pecas(data_inicio, data_fim)
+        linhas_json = [
+            {
+                "id_os": r[0],
+                "data": r[1],
+                "peca": r[2],
+                "quantidade": float(r[3]),
+                "valor_unitario": float(r[4]),
+                "valor_custo_unitario": float(r[5]),
+                "valor_total_venda": float(r[6]),
+                "valor_total_custo": float(r[7]),
+                "lucro_bruto": float(r[8])
+            }
+            for r in dados["linhas"]
+        ]
+        return jsonify({
+            "status": "sucesso",
+            "tipo": tipo,
+            "periodo": {"data_inicio": data_inicio, "data_fim": data_fim},
+            "totais": dados["totais"],
+            "registros": linhas_json
+        })
+
+    elif tipo == "prestadores":
+        dados = obter_dados_relatorio_prestadores(data_inicio, data_fim)
+        linhas_json = [
+            {
+                "prestador": r[0],
+                "qtd_servicos": int(r[1]),
+                "total_faturado": float(r[2]),
+                "total_repasse": float(r[3]),
+                "retido_oficina": float(r[4])
+            }
+            for r in dados["linhas"]
+        ]
+        return jsonify({
+            "status": "sucesso",
+            "tipo": tipo,
+            "periodo": {"data_inicio": data_inicio, "data_fim": data_fim},
+            "totais": dados["totais"],
+            "registros": linhas_json
+        })
+
+    elif tipo == "financeiro":
+        dados = obter_dados_relatorio_financeiro(data_inicio, data_fim)
+        return jsonify({
+            "status": "sucesso",
+            "tipo": tipo,
+            "periodo": {"data_inicio": data_inicio, "data_fim": data_fim},
+            "resumo": {
+                "qtd_os": dados["qtd_os"],
+                "faturamento_total": float(dados["faturamento_total"]),
+                "faturamento_pecas": float(dados["faturamento_pecas"]),
+                "faturamento_mao_obra": float(dados["faturamento_mao_obra"]),
+                "total_repasses": float(dados["total_repasses"]),
+                "custo_pecas": float(dados["custo_pecas"]),
+                "lucro_pecas": float(dados["lucro_pecas"]),
+                "lucro_bruto_operacional": float(dados["lucro_bruto_operacional"]),
+                "total_despesas": float(dados["total_despesas"]),
+                "lucro_liquido_real": float(dados["lucro_liquido_real"])
+            },
+            "despesas_por_categoria": [
+                {"categoria": c[0], "qtd": c[1], "valor": float(c[2])}
+                for c in dados["despesas_categorias"]
+            ]
+        })
+
+    return jsonify({"status": "erro", "mensagem": "Tipo de relatório inválido."}), 400
 
 
 # ============================================================

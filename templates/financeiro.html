@@ -572,12 +572,24 @@
         <h2 style="margin: 0; border: none; padding: 0;">
             Financeiro Completo
         </h2>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a href="/pecas" style="background-color: #222222; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;">
-                <i class="fa-solid fa-boxes-stacked"></i> Catálogo de Peças
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="/relatorios/financeiro/pdf?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" style="background-color: #d71920; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;" title="Baixar Extrato Financeiro em PDF">
+                <i class="fa-solid fa-file-pdf"></i> Baixar PDF
             </a>
-            <a href="/despesas" style="background-color: #c62828; color: white; padding: 8px 14px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;">
-                <i class="fa-solid fa-receipt"></i> Saídas e Despesas
+            <a href="/relatorios/financeiro/csv?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" style="background-color: #198754; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;" title="Baixar Extrato Financeiro em Excel (CSV)">
+                <i class="fa-solid fa-file-excel"></i> Baixar Excel
+            </a>
+            <a href="/relatorios/financeiro/xml?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" style="background-color: #0d6efd; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;" title="Baixar Extrato Financeiro em XML">
+                <i class="fa-solid fa-file-code"></i> Baixar XML
+            </a>
+            <a href="/relatorios" style="background-color: #444444; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;" title="Acessar Central de Relatórios com Mão de Obra, Peças e Equipe">
+                <i class="fa-solid fa-file-invoice-dollar"></i> Central de Relatórios
+            </a>
+            <a href="/pecas" style="background-color: #222222; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;">
+                <i class="fa-solid fa-boxes-stacked"></i> Peças
+            </a>
+            <a href="/despesas" style="background-color: #c62828; color: white; padding: 8px 12px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold;">
+                <i class="fa-solid fa-receipt"></i> Despesas
             </a>
         </div>
     </div>

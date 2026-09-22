@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Relatórios - New Power Auto Mecânica</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #eeeeee;
+            color: #222;
+        }
+        .container {
+            width: 94%;
+            max-width: 1200px;
+            margin: 25px auto;
+        }
+        .topo {
+            background: #ffffff;
+            padding: 20px 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid #d71920;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .topo-esquerda {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo {
+            width: 130px;
+            height: auto;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .logo:hover {
+            transform: scale(1.02);
+        }
+        .topo-titulos h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .topo-titulos .subtitulo {
+            margin-top: 4px;
+            font-size: 13.5px;
+            color: #666;
+        }
+        .btn-voltar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 6px;
+            background: #222222;
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn-voltar:hover {
+            background: #444444;
+        }
+        /* NAVEGAÇÃO ENTRE TIPOS DE RELATÓRIO */
+        .tabs-relatorios {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .tab-item {
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            text-decoration: none;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-item:hover {
+            background: #fafafa;
+            transform: translateY(-2px);
+        }
+        .tab-item.ativo {
+            border-left-color: #d71920;
+            background: #ffffff;
+            box-shadow: 0 3px 10px rgba(215, 25, 32, 0.15);
+        }
+        .tab-icone {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            background: #f4f4f4;
+            color: #444;
+        }
+        .tab-item.ativo .tab-icone {
+            background: #fde8e8;
+            color: #d71920;
+        }
+        .tab-texto h3 {
+            margin: 0;
+            font-size: 14.5px;
+            color: #111;
+        }
+        .tab-texto p {
+            margin: 3px 0 0;
+            font-size: 12px;
+            color: #777;
+        }
+
+        /* CARD DE FILTROS & AÇÕES */
+        .card-controles {
+            background: #ffffff;
+            padding: 22px 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 22px;
+        }
+        .form-filtros {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 15px;
+            margin-bottom: 18px;
+        }
+        .campo-filtro {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .campo-filtro label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #444;
+        }
+        .campo-filtro input {
+            padding: 9px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .btn-filtrar {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            background: #d71920;
+            color: #ffffff;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .btn-filtrar:hover {
+            background: #b5141a;
+        }
+        .atalhos-periodo {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .atalhos-periodo span {
+            font-size: 13px;
+            color: #666;
+            margin-right: 4px;
+            font-weight: bold;
+        }
+        .btn-atalho {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 12px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-atalho:hover {
+            background: #e2e2e2;
+            color: #000;
+        }
+        .divisor-controles {
+            height: 1px;
+            background: #eee;
+            margin: 18px 0;
+        }
+        .barra-exportacao {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .periodo-atual-badge {
+            font-size: 13.5px;
+            color: #555;
+            background: #f8f9fa;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border-left: 3px solid #d71920;
+        }
+        .botoes-exportar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-exp {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 13.5px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.15s;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-pdf {
+            background: #d71920;
+            color: #ffffff;
+        }
+        .btn-pdf:hover {
+            background: #b5141a;
+        }
+        .btn-excel {
+            background: #198754;
+            color: #ffffff;
+        }
+        .btn-excel:hover {
+            background: #157347;
+        }
+        .btn-xml {
+            background: #0d6efd;
+            color: #ffffff;
+        }
+        .btn-xml:hover {
+            background: #0b5ed7;
+        }
+        .btn-json {
+            background: #6c757d;
+            color: #ffffff;
+        }
+        .btn-json:hover {
+            background: #5c636a;
+        }
+
+        /* CARDS RESUMO / KPIS */
+        .cards-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+        .card-kpi {
+            background: #ffffff;
+            padding: 18px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-top: 3px solid #d71920;
+        }
+        .card-kpi-titulo {
+            font-size: 12.5px;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+        .card-kpi-valor {
+            font-size: 22px;
+            font-weight: bold;
+            color: #111;
+        }
+        .card-kpi-sub {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .kpi-verde { border-top-color: #198754; }
+        .kpi-verde .card-kpi-valor { color: #198754; }
+        .kpi-azul { border-top-color: #0d6efd; }
+        .kpi-azul .card-kpi-valor { color: #0d6efd; }
+        .kpi-vermelho { border-top-color: #dc3545; }
+        .kpi-vermelho .card-kpi-valor { color: #dc3545; }
+
+        /* TABELA DE DADOS */
+        .card-tabela {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        .card-tabela-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .card-tabela-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tabela-wrapper {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 11px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 13.5px;
+        }
+        th {
+            background: #222222;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        tr:hover td {
+            background: #fafafa;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11.5px;
+            font-weight: bold;
+        }
+        .badge-servico { background: #e7f1ff; color: #0d6efd; }
+        .badge-peca { background: #fef3c7; color: #b45309; }
+        .badge-mecanico { background: #f3e8ff; color: #7e22ce; }
+        .sem-dados {
+            text-align: center;
+            padding: 50px 20px;
+            color: #777;
+        }
+        .sem-dados i {
+            font-size: 44px;
+            color: #ccc;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 768px) {
+            .topo { flex-direction: column; align-items: flex-start; }
+            .form-filtros { flex-direction: column; align-items: stretch; }
+            .barra-exportacao { flex-direction: column; align-items: stretch; }
+            .btn-exp { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="topo">
+        <div class="topo-esquerda">
+            <a href="/">
+                <img src="{{ url_for('static', filename='logo.jpg') }}" alt="New Power Auto Mecânica" class="logo">
+            </a>
+            <div class="topo-titulos">
+                <h1><i class="fa-solid fa-file-invoice-dollar" style="color: #d71920;"></i> Central de Relatórios & Exportação</h1>
+                <div class="subtitulo">Gere relatórios executivos e planilhas em PDF, Excel/CSV, XML e API JSON.</div>
+            </div>
+        </div>
+        <a href="/menu" class="btn-voltar">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Menu
+        </a>
+    </div>
+
+    <!-- TABS DE SELEÇÃO DO RELATÓRIO -->
+    <div class="tabs-relatorios">
+        <a href="/relatorios?tipo=mao-de-obra&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="tab-item {{ 'ativo' if tipo == 'mao-de-obra' else '' }}">
+            <div class="tab-icone"><i class="fa-solid fa-wrench"></i></div>
+            <div class="tab-texto">
+                <h3>Mão de Obra</h3>
+                <p>Serviços executados e repasses</p>
+            </div>
+        </a>
+        <a href="/relatorios?tipo=pecas&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="tab-item {{ 'ativo' if tipo == 'pecas' else '' }}">
+            <div class="tab-icone"><i class="fa-solid fa-boxes-stacked"></i></div>
+            <div class="tab-texto">
+                <h3>Peças & Margem</h3>
+                <p>Custos, vendas e lucro real</p>
+            </div>
+        </a>
+        <a href="/relatorios?tipo=prestadores&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="tab-item {{ 'ativo' if tipo == 'prestadores' else '' }}">
+            <div class="tab-icone"><i class="fa-solid fa-users-gear"></i></div>
+            <div class="tab-texto">
+                <h3>Equipe & Parceiros</h3>
+                <p>Produção e comissões devidas</p>
+            </div>
+        </a>
+        <a href="/relatorios?tipo=financeiro&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="tab-item {{ 'ativo' if tipo == 'financeiro' else '' }}">
+            <div class="tab-icone"><i class="fa-solid fa-chart-line"></i></div>
+            <div class="tab-texto">
+                <h3>Fechamento DRE</h3>
+                <p>Extrato financeiro consolidado</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- CARD DE CONTROLE DE FILTRO & EXPORTAÇÃO -->
+    <div class="card-controles">
+        <form method="GET" action="/relatorios" class="form-filtros" id="formFiltro">
+            <input type="hidden" name="tipo" value="{{ tipo }}">
+            
+            <div class="campo-filtro">
+                <label for="data_inicio">Data Inicial</label>
+                <input type="date" id="data_inicio" name="data_inicio" value="{{ data_inicio }}">
+            </div>
+            
+            <div class="campo-filtro">
+                <label for="data_fim">Data Final</label>
+                <input type="date" id="data_fim" name="data_fim" value="{{ data_fim }}">
+            </div>
+
+            <button type="submit" class="btn-filtrar">
+                <i class="fa-solid fa-magnifying-glass"></i> Filtrar Dados
+            </button>
+
+            <div class="atalhos-periodo">
+                <span>Atalhos:</span>
+                <button type="button" class="btn-atalho" onclick="definirPeriodo('hoje')">Hoje</button>
+                <button type="button" class="btn-atalho" onclick="definirPeriodo('este_mes')">Este Mês</button>
+                <button type="button" class="btn-atalho" onclick="definirPeriodo('mes_passado')">Mês Passado</button>
+                <button type="button" class="btn-atalho" onclick="definirPeriodo('ultimos_30')">Últimos 30 Dias</button>
+                <button type="button" class="btn-atalho" onclick="definirPeriodo('ano')">Este Ano</button>
+                <button type="button" class="btn-atalho" onclick="definirPeriodo('tudo')">Todo o Período</button>
+            </div>
+        </form>
+
+        <div class="divisor-controles"></div>
+
+        <div class="barra-exportacao">
+            <div class="periodo-atual-badge">
+                <i class="fa-regular fa-calendar-days" style="color: #d71920; margin-right: 6px;"></i>
+                <strong>Período Analisado:</strong> {{ periodo_formatado }}
+            </div>
+
+            <div class="botoes-exportar">
+                <a href="/relatorios/{{ tipo }}/pdf?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="btn-exp btn-pdf" title="Baixar documento em PDF diagramado para impressão">
+                    <i class="fa-solid fa-file-pdf"></i> Baixar PDF
+                </a>
+                <a href="/relatorios/{{ tipo }}/csv?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="btn-exp btn-excel" title="Baixar planilha para abrir no Microsoft Excel ou Google Sheets">
+                    <i class="fa-solid fa-file-excel"></i> Baixar Excel (CSV)
+                </a>
+                <a href="/relatorios/{{ tipo }}/xml?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="btn-exp btn-xml" title="Baixar arquivo XML para sistemas contábeis ou ERP">
+                    <i class="fa-solid fa-file-code"></i> Baixar XML
+                </a>
+                <a href="/api/relatorios/{{ tipo }}?data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" target="_blank" class="btn-exp btn-json" title="Visualizar API JSON para alimentação de dashboards">
+                    <i class="fa-solid fa-code"></i> API JSON
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARDS DE KPIS / TOTALIZADORES -->
+    <div class="cards-kpis">
+        {% for kpi in kpis %}
+        <div class="card-kpi {{ kpi.cor_classe }}">
+            <div class="card-kpi-titulo">{{ kpi.titulo }}</div>
+            <div class="card-kpi-valor">{{ kpi.valor }}</div>
+            {% if kpi.subtitulo %}
+            <div class="card-kpi-sub">{{ kpi.subtitulo }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- TABELA DE DADOS DO RELATÓRIO -->
+    <div class="card-tabela">
+        <div class="card-tabela-header">
+            <h2><i class="fa-solid fa-table-list"></i> Pré-visualização do Relatório: {{ titulo_relatorio }}</h2>
+            <span style="font-size: 13px; color: #777;">{{ itens|length }} registro(s) encontrado(s)</span>
+        </div>
+
+        {% if itens %}
+        <div class="tabela-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        {% for col in colunas %}
+                        <th class="{{ 'text-right' if col.alinhamento == 'right' else ('text-center' if col.alinhamento == 'center' else '') }}">
+                            {{ col.nome }}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for linha in itens %}
+                    <tr>
+                        {% for val in linha %}
+                        <td class="{{ 'text-right' if loop.index0 in colunas_alinhadas_direita else ('text-center' if loop.index0 in colunas_alinhadas_centro else '') }}">
+                            {{ val }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="sem-dados">
+            <i class="fa-solid fa-folder-open"></i>
+            <h3>Nenhum registro encontrado no período selecionado</h3>
+            <p>Selecione outro intervalo de datas ou clique em "Todo o Período" acima para visualizar seus lançamentos.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function definirPeriodo(tipo) {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth();
+    const dia = hoje.getDate();
+
+    function formatarData(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const diaStr = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${diaStr}`;
+    }
+
+    let dInicio = '';
+    let dFim = '';
+
+    if (tipo === 'hoje') {
+        dInicio = formatarData(hoje);
+        dFim = formatarData(hoje);
+    } else if (tipo === 'este_mes') {
+        dInicio = formatarData(new Date(ano, mes, 1));
+        dFim = formatarData(new Date(ano, mes + 1, 0));
+    } else if (tipo === 'mes_passado') {
+        dInicio = formatarData(new Date(ano, mes - 1, 1));
+        dFim = formatarData(new Date(ano, mes, 0));
+    } else if (tipo === 'ultimos_30') {
+        const d30 = new Date();
+        d30.setDate(hoje.getDate() - 30);
+        dInicio = formatarData(d30);
+        dFim = formatarData(hoje);
+    } else if (tipo === 'ano') {
+        dInicio = formatarData(new Date(ano, 0, 1));
+        dFim = formatarData(new Date(ano, 11, 31));
+    } else if (tipo === 'tudo') {
+        dInicio = '';
+        dFim = '';
+    }
+
+    document.getElementById('data_inicio').value = dInicio;
+    document.getElementById('data_fim').value = dFim;
+    document.getElementById('formFiltro').submit();
+}
+</script>
+</body>
+</html>
