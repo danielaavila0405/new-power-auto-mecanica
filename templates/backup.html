@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backups & Segurança - New Power Auto Mecânica</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #eeeeee;
+            color: #222;
+        }
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 30px auto;
+        }
+        .topo {
+            background: #ffffff;
+            padding: 22px 25px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid #d71920;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .topo-esquerda {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo {
+            width: 120px;
+            height: auto;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .logo:hover {
+            transform: scale(1.02);
+        }
+        .topo-titulos h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .topo-titulos .subtitulo {
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        .botoes-topo {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .btn-criar {
+            background: #d71920;
+            color: #fff;
+        }
+        .btn-criar:hover {
+            background: #b5141a;
+        }
+        .btn-download-live {
+            background: #0d6efd;
+            color: #fff;
+        }
+        .btn-download-live:hover {
+            background: #0b5ed7;
+        }
+        .btn-voltar {
+            background: #333333;
+            color: #fff;
+        }
+        .btn-voltar:hover {
+            background: #555555;
+        }
+        .mensagem {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mensagem-sucesso {
+            background: #e8f5e9;
+            border: 1px solid #81c784;
+            color: #256029;
+        }
+        .mensagem-erro {
+            background: #ffebee;
+            border: 1px solid #e57373;
+            color: #b71c1c;
+        }
+        .cards-indicadores {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+        .card-ind {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .card-ind-icone {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+        .ind-azul { background: #e7f1ff; color: #0d6efd; }
+        .ind-verde { background: #e8f5e9; color: #2e7d32; }
+        .ind-vermelho { background: #fde8e8; color: #d71920; }
+        .ind-roxo { background: #f3e8ff; color: #7e22ce; }
+        .card-ind-info h4 {
+            margin: 0;
+            font-size: 13px;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .card-ind-info .valor {
+            margin-top: 4px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #111;
+        }
+        .card-tabela {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        .card-tabela-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .card-tabela-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        tr:hover td {
+            background: #fafafa;
+        }
+        .badge-hoje {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .btn-tabela-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 5px;
+            background: #0d6efd;
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            transition: background 0.15s;
+        }
+        .btn-tabela-download:hover {
+            background: #0b5ed7;
+        }
+        .btn-tabela-excluir {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 5px;
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: background 0.15s;
+        }
+        .btn-tabela-excluir:hover {
+            background: #bb2d3b;
+        }
+        .sem-backups {
+            text-align: center;
+            padding: 40px 20px;
+            color: #777;
+        }
+        .sem-backups i {
+            font-size: 40px;
+            color: #ccc;
+            margin-bottom: 12px;
+        }
+        .card-info-tecnica {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #d71920;
+        }
+        .card-info-tecnica h3 {
+            margin: 0 0 12px;
+            font-size: 16px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-info-tecnica ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #555;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+        .acoes-col {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        @media (max-width: 768px) {
+            .topo { flex-direction: column; align-items: flex-start; }
+            .botoes-topo { width: 100%; }
+            .btn { width: 100%; justify-content: center; }
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid #ddd; margin-bottom: 12px; border-radius: 8px; padding: 8px; }
+            td { border: none; position: relative; padding-left: 40%; }
+            td:before { position: absolute; left: 10px; width: 35%; font-weight: bold; content: attr(data-label); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="topo">
+        <div class="topo-esquerda">
+            <a href="/">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="New Power" class="logo">
+            </a>
+            <div class="topo-titulos">
+                <h1><i class="fa-solid fa-database" style="color: #d71920;"></i> Backups & Segurança do Banco</h1>
+                <div class="subtitulo">Gestão de cópias de segurança do SQLite com retenção automatizada.</div>
+            </div>
+        </div>
+        <div class="botoes-topo">
+            <form method="POST" action="/backups/criar" style="display: inline;">
+                <button type="submit" class="btn btn-criar">
+                    <i class="fa-solid fa-floppy-disk"></i> Gerar Novo Backup
+                </button>
+            </form>
+            <a href="/backups/download-atual" class="btn btn-download-live">
+                <i class="fa-solid fa-cloud-arrow-down"></i> Baixar Banco Atual (.db)
+            </a>
+            <a href="/menu" class="btn btn-voltar">
+                <i class="fa-solid fa-arrow-left"></i> Voltar ao Menu
+            </a>
+        </div>
+    </div>
+
+    {% if mensagem %}
+    <div class="mensagem {{ 'mensagem-sucesso' if tipo == 'sucesso' else 'mensagem-erro' }}">
+        <i class="fa-solid {{ 'fa-circle-check' if tipo == 'sucesso' else 'fa-circle-exclamation' }}"></i>
+        <span>{{ mensagem }}</span>
+    </div>
+    {% endif %}
+
+    <!-- CARDS DE STATUS -->
+    <div class="cards-indicadores">
+        <div class="card-ind">
+            <div class="card-ind-icone ind-azul">
+                <i class="fa-solid fa-hard-drive"></i>
+            </div>
+            <div class="card-ind-info">
+                <h4>Cópias Disponíveis</h4>
+                <div class="valor">{{ backups|length }} / 15</div>
+            </div>
+        </div>
+        <div class="card-ind">
+            <div class="card-ind-icone ind-verde">
+                <i class="fa-solid fa-shield-check"></i>
+            </div>
+            <div class="card-ind-info">
+                <h4>Modo SQLite</h4>
+                <div class="valor">WAL Ativo</div>
+            </div>
+        </div>
+        <div class="card-ind">
+            <div class="card-ind-icone ind-roxo">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div class="card-ind-info">
+                <h4>Último Backup</h4>
+                <div class="valor" style="font-size: 15px;">
+                    {% if backups %}
+                        {{ backups[0].data_formatada }}
+                    {% else %}
+                        Nenhum ainda
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card-ind">
+            <div class="card-ind-icone ind-vermelho">
+                <i class="fa-solid fa-weight-scale"></i>
+            </div>
+            <div class="card-ind-info">
+                <h4>Tamanho Total</h4>
+                <div class="valor">{{ tamanho_total_formatado }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABELA DE BACKUPS -->
+    <div class="card-tabela">
+        <div class="card-tabela-header">
+            <h2><i class="fa-solid fa-list"></i> Histórico de Backups</h2>
+            <span style="font-size: 13px; color: #777;">Os 15 backups mais recentes são preservados automaticamente.</span>
+        </div>
+
+        {% if backups %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Arquivo</th>
+                    <th>Data e Horário</th>
+                    <th>Tamanho</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in backups %}
+                <tr>
+                    <td data-label="Arquivo">
+                        <strong><i class="fa-regular fa-file-lines" style="color: #666; margin-right: 6px;"></i>{{ b.nome }}</strong>
+                        {% if b.eh_hoje %}
+                        <span class="badge-hoje"><i class="fa-solid fa-calendar-day"></i> Hoje</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Data e Horário">{{ b.data_formatada }}</td>
+                    <td data-label="Tamanho">{{ b.tamanho_formatado }}</td>
+                    <td data-label="Ações" style="text-align: right;">
+                        <div class="acoes-col" style="justify-content: flex-end;">
+                            <a href="/backups/{{ b.nome }}/download" class="btn-tabela-download" title="Baixar este arquivo de backup">
+                                <i class="fa-solid fa-download"></i> Baixar
+                            </a>
+                            <form method="POST" action="/backups/{{ b.nome }}/excluir" style="display: inline;" onsubmit="return confirm('Deseja realmente remover permanentemente este arquivo de backup?');">
+                                <button type="submit" class="btn-tabela-excluir" title="Excluir arquivo de backup">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="sem-backups">
+            <i class="fa-solid fa-folder-open"></i>
+            <h3>Nenhum arquivo de backup gerado até o momento</h3>
+            <p>Clique no botão "Gerar Novo Backup" acima para criar sua primeira cópia de segurança agora.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- INFORMAÇÕES DE ENGENHARIA -->
+    <div class="card-info-tecnica">
+        <h3><i class="fa-solid fa-gears" style="color: #d71920;"></i> Arquitetura de Resiliência & Backup do Sistema</h3>
+        <ul>
+            <li><strong>Modo WAL (Write-Ahead Logging):</strong> Garante leitura concorrente sem travas enquanto gravações são processadas de forma rápida e segura.</li>
+            <li><strong>Backup Online Atômico:</strong> Os backups são gerados utilizando a API oficial C/Python <code>sqlite3.Connection.backup()</code>, garantindo cópias 100% íntegras mesmo com clientes e mecânicos operando o sistema simultaneamente.</li>
+            <li><strong>Rotina Preventiva Automática:</strong> Ao iniciar, a aplicação verifica a existência de cópia diária e dispara o backup caso o dia atual ainda não possua uma.</li>
+            <li><strong>Política de Retenção:</strong> Para economizar armazenamento em disco e evitar acúmulo excessivo, o sistema mantém as 15 cópias mais recentes, eliminando backups mais antigos automaticamente.</li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>

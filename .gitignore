@@ -5,3 +5,8 @@ __pycache__/
 *.pyc
 .vscode/
 .env
+logs/
+*.log
+backups/*.db
+backups/.temp/
+!backups/.gitkeep

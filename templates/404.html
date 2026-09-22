@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Página Não Encontrada | New Power Auto Mecânica</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #eeeeee;
+            color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .erro-card {
+            background: #ffffff;
+            max-width: 520px;
+            width: 100%;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border-top: 5px solid #d71920;
+        }
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .logo:hover {
+            transform: scale(1.03);
+        }
+        .codigo-erro {
+            font-size: 64px;
+            font-weight: 900;
+            color: #d71920;
+            margin: 0 0 10px;
+            line-height: 1;
+        }
+        .icone-erro {
+            font-size: 48px;
+            color: #d71920;
+            margin-bottom: 15px;
+        }
+        h1 {
+            font-size: 22px;
+            color: #222;
+            margin: 0 0 12px;
+        }
+        p {
+            font-size: 14px;
+            color: #666;
+            margin: 0 0 25px;
+            line-height: 1.5;
+        }
+        .botoes {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 22px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s;
+        }
+        .btn-principal {
+            background: #d71920;
+            color: #ffffff;
+        }
+        .btn-principal:hover {
+            background: #b5141a;
+        }
+        .btn-secundario {
+            background: #222222;
+            color: #ffffff;
+        }
+        .btn-secundario:hover {
+            background: #444444;
+        }
+        .rodape-info {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="erro-card">
+        <a href="/">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="New Power Auto Mecânica" class="logo">
+        </a>
+        <div class="codigo-erro">404</div>
+        <h1>Página Não Encontrada</h1>
+        <p>
+            O endereço acessado não existe, foi removido ou está temporariamente indisponível no sistema da oficina.
+        </p>
+        <div class="botoes">
+            <a href="/" class="btn btn-principal">
+                <i class="fa-solid fa-house"></i> Voltar ao Início
+            </a>
+            <button onclick="window.history.back()" class="btn btn-secundario">
+                <i class="fa-solid fa-arrow-left"></i> Voltar à Página Anterior
+            </button>
+        </div>
+        <div class="rodape-info">
+            New Power Auto Mecânica &bull; Sistema de Gestão
+        </div>
+    </div>
+</body>
+</html>

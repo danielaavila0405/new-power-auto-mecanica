@@ -10,10 +10,13 @@ pasta_projeto = Path(__file__).parent
 banco = pasta_projeto / "oficina.db"
 
 
-conexao = sqlite3.connect(banco)
+conexao = sqlite3.connect(banco, timeout=10.0)
 
-# Ativar integridade das relações entre tabelas
-conexao.execute("PRAGMA foreign_keys = ON")
+# Ativar resiliência de concorrência e integridade das relações entre tabelas
+conexao.execute("PRAGMA journal_mode = WAL;")
+conexao.execute("PRAGMA busy_timeout = 10000;")
+conexao.execute("PRAGMA synchronous = NORMAL;")
+conexao.execute("PRAGMA foreign_keys = ON;")
 
 cursor = conexao.cursor()
 

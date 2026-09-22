@@ -6,14 +6,20 @@ from flask import (
     jsonify,
     send_file,
     send_from_directory,
-    session
+    session,
+    g
 )
 import sqlite3
 import os
+import sys
+import time
+import logging
+from logging.handlers import RotatingFileHandler
 import json
 import re
 import urllib.request
 import urllib.error
+import urllib.parse
 from pathlib import Path
 from datetime import datetime
 from io import BytesIO
@@ -59,6 +65,48 @@ banco = Path(CAMINHO_BANCO)
 banco.parent.mkdir(parents=True, exist_ok=True)
 
 # ============================================================
+# DIRETÓRIOS DE LOGS E BACKUPS
+# ============================================================
+LOGS_DIR = pasta_projeto / "logs"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOGS_DIR / "app.log"
+
+BACKUPS_DIR = pasta_projeto / "backups"
+BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+
+# ============================================================
+# LOGGING ESTRUTURADO E OBSERVABILIDADE
+# ============================================================
+logger = logging.getLogger("new_power")
+logger.setLevel(logging.INFO)
+
+if not logger.handlers:
+    log_formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    # 1. Console (stdout) para Railway / Docker streaming
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(log_formatter)
+    stream_handler.setLevel(logging.INFO)
+    logger.addHandler(stream_handler)
+
+    # 2. Arquivo rotativo (5MB por arquivo, 5 rotações preservadas)
+    try:
+        file_handler = RotatingFileHandler(
+            LOG_FILE,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8"
+        )
+        file_handler.setFormatter(log_formatter)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+    except Exception as e_log:
+        sys.stderr.write(f"Aviso: Não foi possível iniciar RotatingFileHandler: {e_log}\n")
+
+# ============================================================
 # CONFIGURAÇÃO DA API DE CONSULTA DE PLACAS
 # ============================================================
 caminho_env = pasta_projeto / ".env"
@@ -81,8 +129,11 @@ PLACA_API_PROVIDER = os.environ.get("PLACA_API_PROVIDER", "wdapi").lower()
 
 
 def conectar_banco():
-    conexao = sqlite3.connect(banco)
-    conexao.execute("PRAGMA foreign_keys = ON")
+    conexao = sqlite3.connect(banco, timeout=10.0)
+    conexao.execute("PRAGMA journal_mode = WAL;")
+    conexao.execute("PRAGMA busy_timeout = 10000;")
+    conexao.execute("PRAGMA synchronous = NORMAL;")
+    conexao.execute("PRAGMA foreign_keys = ON;")
     return conexao
 
 
@@ -329,15 +380,105 @@ def garantir_tabelas_sistema():
     conexao.close()
 
 
+# ============================================================
+# BACKUP AUTOMATIZADO DO SQLITE
+# ============================================================
+
+def executar_backup_sqlite():
+    """
+    Executa backup online, atômico e não-bloqueante utilizando a API
+    nativa sqlite3.Connection.backup().
+    Aplica política de retenção mantendo os 15 backups mais recentes.
+    """
+    try:
+        if not banco.exists():
+            logger.warning("Tentativa de backup falhou: arquivo do banco de dados não encontrado.")
+            return False, "Arquivo do banco de dados não encontrado."
+
+        BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+        agora = datetime.now()
+        nome_arquivo = f"backup_oficina_{agora.strftime('%Y%m%d_%H%M%S')}.db"
+        caminho_destino = BACKUPS_DIR / nome_arquivo
+
+        conexao_origem = sqlite3.connect(banco, timeout=15.0)
+        conexao_destino = sqlite3.connect(caminho_destino)
+
+        try:
+            conexao_origem.backup(conexao_destino)
+        finally:
+            conexao_destino.close()
+            conexao_origem.close()
+
+        # Política de retenção: manter os 15 mais recentes
+        arquivos_backup = sorted(
+            [f for f in BACKUPS_DIR.glob("backup_oficina_*.db") if f.is_file()],
+            key=lambda x: x.stat().st_mtime,
+            reverse=True
+        )
+        for backup_antigo in arquivos_backup[15:]:
+            try:
+                backup_antigo.unlink()
+                logger.info(f"Backup antigo removido pela política de retenção: {backup_antigo.name}")
+            except Exception as ex_limpeza:
+                logger.warning(f"Erro ao remover backup antigo {backup_antigo.name}: {ex_limpeza}")
+
+        tamanho_kb = caminho_destino.stat().st_size / 1024
+        logger.info(f"Backup realizado com sucesso: {nome_arquivo} ({tamanho_kb:.1f} KB)")
+        return True, nome_arquivo
+
+    except Exception as e:
+        logger.error(f"Erro crítico ao executar backup do SQLite: {e}", exc_info=True)
+        return False, str(e)
+
+
+def verificar_backup_diario_inicial():
+    """Verifica e executa backup diário preventivo ao iniciar a aplicação."""
+    try:
+        BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+        hoje_str = datetime.now().strftime("%Y%m%d")
+        backups_hoje = list(BACKUPS_DIR.glob(f"backup_oficina_{hoje_str}_*.db"))
+        if not backups_hoje and banco.exists():
+            logger.info("Nenhum backup encontrado para o dia de hoje. Executando backup diário preventivo de inicialização...")
+            sucesso, res = executar_backup_sqlite()
+            if sucesso:
+                logger.info(f"Backup diário de inicialização gerado com sucesso: {res}")
+            else:
+                logger.warning(f"Falha ao gerar backup diário de inicialização: {res}")
+    except Exception as e:
+        logger.warning(f"Não foi possível verificar/executar backup diário inicial: {e}")
+
+
 garantir_tabelas_sistema()
+verificar_backup_diario_inicial()
 
 
 # ============================================================
-# CONTROLE DE LOGIN
+# AUDITORIA DE REQUISIÇÕES & CONTROLE DE ACESSO
 # ============================================================
 
 @app.before_request
+def monitorar_inicio_requisicao():
+    g.start_time = time.time()
+
+
+@app.after_request
+def registrar_log_requisicao(response):
+    if not request.path.startswith("/static") and request.endpoint != "favicon":
+        duracao_ms = (time.time() - getattr(g, "start_time", time.time())) * 1000
+        usuario = session.get("usuario", "anonimo")
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        logger.info(
+            f"{request.method} {request.path} {response.status_code} - {duracao_ms:.1f}ms - user:{usuario} ip:{ip}"
+        )
+    return response
+
+
+@app.before_request
 def verificar_login():
+
+    # Se o endpoint não foi encontrado (404), deixa o manipulador de erro 404 responder
+    if request.endpoint is None:
+        return
 
     # Rotas que podem ser acessadas sem login.
     if request.endpoint in ("login", "esqueci_senha", "gerar_pdf_os", "favicon"):
@@ -357,6 +498,36 @@ def verificar_login():
         "logout",
     ):
         return redirect("/alterar-senha")
+
+
+# ============================================================
+# MANIPULADORES GLOBAIS DE ERRO (404 & 500)
+# ============================================================
+
+@app.errorhandler(404)
+def pagina_nao_encontrada(e):
+    usuario = session.get("usuario", "anonimo")
+    logger.warning(f"404 Não Encontrado: {request.method} {request.path} - user:{usuario}")
+    return render_template("404.html"), 404
+
+
+@app.errorhandler(500)
+def erro_interno_servidor(e):
+    usuario = session.get("usuario", "anonimo")
+    logger.error(f"500 Erro Interno na rota {request.method} {request.path} - user:{usuario} - {e}", exc_info=True)
+    return render_template("500.html"), 500
+
+
+@app.errorhandler(Exception)
+def tratar_excecao_global(e):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        if e.code == 404:
+            return pagina_nao_encontrada(e)
+        return e
+    usuario = session.get("usuario", "anonimo")
+    logger.error(f"Exceção não tratada na rota {request.method} {request.path} - user:{usuario}: {e}", exc_info=True)
+    return render_template("500.html"), 500
 
 
 @app.route("/favicon.ico")
@@ -3993,6 +4164,166 @@ def esqueci_senha():
         sucesso=sucesso,
         whatsapp_admin=WHATSAPP_ADMIN
     )
+
+
+# ============================================================
+# GERENCIAMENTO DE BACKUPS (ADMIN)
+# ============================================================
+
+@app.route("/backups", methods=["GET"])
+def backups():
+    if not usuario_e_admin():
+        return "Acesso negado. Apenas administradores podem gerenciar backups.", 403
+
+    mensagem = request.args.get("mensagem", "")
+    tipo = request.args.get("tipo", "")
+
+    BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+    arquivos = sorted(
+        [f for f in BACKUPS_DIR.glob("backup_oficina_*.db") if f.is_file()],
+        key=lambda x: x.stat().st_mtime,
+        reverse=True
+    )
+
+    hoje_str = datetime.now().strftime("%Y%m%d")
+    lista_backups = []
+    tamanho_total = 0
+
+    for arq in arquivos:
+        st = arq.stat()
+        tamanho_bytes = st.st_size
+        tamanho_total += tamanho_bytes
+
+        if tamanho_bytes >= 1024 * 1024:
+            tamanho_fmt = f"{tamanho_bytes / (1024 * 1024):.2f} MB"
+        else:
+            tamanho_fmt = f"{tamanho_bytes / 1024:.1f} KB"
+
+        dt_mod = datetime.fromtimestamp(st.st_mtime)
+        data_fmt = dt_mod.strftime("%d/%m/%Y às %H:%M:%S")
+        eh_hoje = dt_mod.strftime("%Y%m%d") == hoje_str
+
+        lista_backups.append({
+            "nome": arq.name,
+            "tamanho_formatado": tamanho_fmt,
+            "data_formatada": data_fmt,
+            "eh_hoje": eh_hoje,
+            "mtime": st.st_mtime
+        })
+
+    if tamanho_total >= 1024 * 1024:
+        total_fmt = f"{tamanho_total / (1024 * 1024):.2f} MB"
+    else:
+        total_fmt = f"{tamanho_total / 1024:.1f} KB"
+
+    return render_template(
+        "backup.html",
+        backups=lista_backups,
+        tamanho_total_formatado=total_fmt,
+        mensagem=mensagem,
+        tipo=tipo
+    )
+
+
+@app.route("/backups/criar", methods=["POST"])
+def backups_criar():
+    if not usuario_e_admin():
+        return "Acesso negado. Apenas administradores podem gerenciar backups.", 403
+
+    usuario = session.get("usuario", "admin")
+    logger.info(f"Solicitação manual de backup iniciada pelo administrador: {usuario}")
+
+    sucesso, res = executar_backup_sqlite()
+    if sucesso:
+        msg = f"Backup '{res}' gerado com sucesso!"
+        return redirect(f"/backups?tipo=sucesso&mensagem={urllib.parse.quote(msg)}")
+    else:
+        msg = f"Falha ao gerar backup: {res}"
+        return redirect(f"/backups?tipo=erro&mensagem={urllib.parse.quote(msg)}")
+
+
+@app.route("/backups/<arquivo>/download", methods=["GET"])
+def backups_download(arquivo):
+    if not usuario_e_admin():
+        return "Acesso negado. Apenas administradores podem baixar backups.", 403
+
+    # Validação de segurança do nome do arquivo contra path traversal
+    if not re.match(r"^backup_oficina_\d{8}_\d{6}\.db$", arquivo):
+        logger.warning(f"Tentativa de download com nome inválido: {arquivo}")
+        return "Nome de arquivo de backup inválido.", 400
+
+    caminho = BACKUPS_DIR / arquivo
+    if not caminho.is_file():
+        return "Arquivo de backup não encontrado.", 404
+
+    usuario = session.get("usuario", "admin")
+    logger.info(f"Download do arquivo de backup '{arquivo}' realizado pelo administrador: {usuario}")
+    return send_from_directory(BACKUPS_DIR, arquivo, as_attachment=True)
+
+
+@app.route("/backups/<arquivo>/excluir", methods=["POST"])
+def backups_excluir(arquivo):
+    if not usuario_e_admin():
+        return "Acesso negado. Apenas administradores podem excluir backups.", 403
+
+    # Validação de segurança
+    if not re.match(r"^backup_oficina_\d{8}_\d{6}\.db$", arquivo):
+        return "Nome de arquivo inválido.", 400
+
+    caminho = BACKUPS_DIR / arquivo
+    if not caminho.is_file():
+        return redirect(f"/backups?tipo=erro&mensagem={urllib.parse.quote('Arquivo não encontrado.')}")
+
+    try:
+        caminho.unlink()
+        usuario = session.get("usuario", "admin")
+        logger.info(f"Backup '{arquivo}' excluído pelo administrador: {usuario}")
+        return redirect(f"/backups?tipo=sucesso&mensagem={urllib.parse.quote('Backup removido com sucesso.')}")
+    except Exception as e:
+        logger.error(f"Erro ao excluir backup {arquivo}: {e}", exc_info=True)
+        return redirect(f"/backups?tipo=erro&mensagem={urllib.parse.quote('Erro ao excluir backup.')}")
+
+
+@app.route("/backups/download-atual", methods=["GET"])
+def backups_download_atual():
+    """
+    Gera um snapshot consistente instantâneo do banco atual via sqlite3.Connection.backup()
+    e envia diretamente como download para o navegador do administrador.
+    """
+    if not usuario_e_admin():
+        return "Acesso negado. Apenas administradores podem baixar o banco de dados.", 403
+
+    if not banco.exists():
+        return "Banco de dados não encontrado.", 404
+
+    try:
+        agora = datetime.now()
+        nome_download = f"oficina_snapshot_{agora.strftime('%Y%m%d_%H%M%S')}.db"
+
+        temp_dir = BACKUPS_DIR / ".temp"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        caminho_temp = temp_dir / nome_download
+
+        conexao_origem = sqlite3.connect(banco, timeout=15.0)
+        conexao_destino = sqlite3.connect(caminho_temp)
+        try:
+            conexao_origem.backup(conexao_destino)
+        finally:
+            conexao_destino.close()
+            conexao_origem.close()
+
+        usuario = session.get("usuario", "admin")
+        logger.info(f"Snapshot instantâneo '{nome_download}' gerado e baixado pelo administrador: {usuario}")
+
+        return send_file(
+            caminho_temp,
+            as_attachment=True,
+            download_name=nome_download,
+            mimetype="application/x-sqlite3"
+        )
+    except Exception as e:
+        logger.error(f"Erro ao gerar snapshot atual do banco: {e}", exc_info=True)
+        return f"Erro ao processar download do banco atual: {e}", 500
 
 
 # ============================================================
