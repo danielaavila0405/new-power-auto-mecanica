@@ -146,7 +146,7 @@
 
         .linha-servico {
             display: grid;
-            grid-template-columns: 2fr 1fr auto;
+            grid-template-columns: 2fr 1.3fr 1fr 1fr auto;
             gap: 8px;
             align-items: end;
             margin-bottom: 8px;
@@ -626,42 +626,32 @@
                     <div class="linha-servico">
 
                         <div>
-
-                            <label>
-                                Serviço
-                            </label>
-
-                            <input
-                                type="text"
-                                name="servico_descricao"
-                                value="{{ servico[0] }}"
-                            >
-
+                            <label>Serviço</label>
+                            <input type="text" name="servico_descricao" value="{{ servico[0] }}" required>
                         </div>
-
 
                         <div>
-
-                            <label>
-                                Valor
-                            </label>
-
-                            <input
-                                type="text"
-                                class="moeda"
-                                name="servico_valor"
-                                value="{{ '%.2f'|format(servico[1])|replace('.', ',') }}"
-                                oninput="calcularTotais()"
-                            >
-
+                            <label>Executante</label>
+                            <select name="servico_executante" class="servico-executante" onchange="atualizarRepasseLinhaEditar(this)">
+                                {% for p in prestadores %}
+                                <option value="{{ p[1] }}" data-porcentagem="{{ p[5] or 0 }}" {% if servico[2] == p[1] or (not servico[2] and p[1] == 'Henrique') %}selected{% endif %}>
+                                    {{ p[1] }} ({{ p[2] }})
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
+                        <div>
+                            <label>Valor (R$)</label>
+                            <input type="text" class="moeda servico-valor" name="servico_valor" value="{{ '%.2f'|format(servico[1])|replace('.', ',') }}" oninput="atualizarRepassePorValorEditar(this); calcularTotais()" required>
+                        </div>
 
-                        <button
-                            type="button"
-                            class="botao-remover"
-                            onclick="removerLinha(this)"
-                        >
+                        <div>
+                            <label>Repasse (R$)</label>
+                            <input type="text" class="moeda servico-repasse" name="servico_repasse" value="{{ '%.2f'|format(servico[3] or 0)|replace('.', ',') }}" oninput="calcularTotais()" title="Valor interno de repasse">
+                        </div>
+
+                        <button type="button" class="botao-remover" onclick="removerLinha(this)">
                             REMOVER
                         </button>
 
@@ -674,41 +664,32 @@
                     <div class="linha-servico">
 
                         <div>
-
-                            <label>
-                                Serviço
-                            </label>
-
-                            <input
-                                type="text"
-                                name="servico_descricao"
-                            >
-
+                            <label>Serviço</label>
+                            <input type="text" name="servico_descricao">
                         </div>
-
 
                         <div>
-
-                            <label>
-                                Valor
-                            </label>
-
-                            <input
-                                type="text"
-                                class="moeda"
-                                name="servico_valor"
-                                value="0,00"
-                                oninput="calcularTotais()"
-                            >
-
+                            <label>Executante</label>
+                            <select name="servico_executante" class="servico-executante" onchange="atualizarRepasseLinhaEditar(this)">
+                                {% for p in prestadores %}
+                                <option value="{{ p[1] }}" data-porcentagem="{{ p[5] or 0 }}" {% if p[1] == 'Henrique' %}selected{% endif %}>
+                                    {{ p[1] }} ({{ p[2] }})
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
 
+                        <div>
+                            <label>Valor (R$)</label>
+                            <input type="text" class="moeda servico-valor" name="servico_valor" value="0,00" oninput="atualizarRepassePorValorEditar(this); calcularTotais()">
+                        </div>
 
-                        <button
-                            type="button"
-                            class="botao-remover"
-                            onclick="removerLinha(this)"
-                        >
+                        <div>
+                            <label>Repasse (R$)</label>
+                            <input type="text" class="moeda servico-repasse" name="servico_repasse" value="0,00" oninput="calcularTotais()">
+                        </div>
+
+                        <button type="button" class="botao-remover" onclick="removerLinha(this)">
                             REMOVER
                         </button>
 
@@ -718,14 +699,83 @@
 
             </div>
 
+            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                <button
+                    type="button"
+                    class="botao-pequeno"
+                    onclick="adicionarServico()"
+                >
+                    + Adicionar Serviço
+                </button>
 
-            <button
-                type="button"
-                class="botao-pequeno"
-                onclick="adicionarServico()"
+                <button
+                    type="button"
+                    class="botao-pequeno"
+                    style="background: #222;"
+                    onclick="abrirCadastroPrestadorRapidoEditar()"
+                >
+                    + Novo Prestador
+                </button>
+            </div>
+
+            <!-- CADASTRO RÁPIDO PRESTADOR -->
+            <div
+                id="cadastroPrestadorRapidoEditar"
+                style="display: none; margin-top: 12px; background: #eee; padding: 12px; border-radius: 5px; border-left: 4px solid #d71920;"
             >
-                + Adicionar Serviço
-            </button>
+                <strong>
+                    Cadastrar novo membro da equipe ou parceiro terceirizado
+                </strong>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 8px;">
+                    <div>
+                        <label style="font-size: 13px; font-weight: bold;">Nome / Empresa *</label>
+                        <input type="text" id="novoPrestadorNomeEdit" placeholder="Ex: Auto Elétrica Silva">
+                    </div>
+
+                    <div>
+                        <label style="font-size: 13px; font-weight: bold;">Tipo *</label>
+                        <select id="novoPrestadorTipoEdit" onchange="ajustarTipoRapidoEdit()">
+                            <option value="Funcionário">Funcionário Interno</option>
+                            <option value="Terceirizado" selected>Empresa Terceirizada</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 13px; font-weight: bold;">Função / Especialidade</label>
+                        <input type="text" id="novoPrestadorFuncaoEdit" placeholder="Ex: Alinhamento, Torno">
+                    </div>
+
+                    <div>
+                        <label style="font-size: 13px; font-weight: bold;">Telefone / WhatsApp</label>
+                        <input type="text" id="novoPrestadorTelefoneEdit" placeholder="(62) 99999-9999">
+                    </div>
+
+                    <div>
+                        <label style="font-size: 13px; font-weight: bold;">Repasse Padrão (%)</label>
+                        <input type="number" step="0.1" id="novoPrestadorRepasseEdit" value="0">
+                    </div>
+                </div>
+
+                <div id="erroPrestadorRapidoEdit" style="display: none; color: #c62828; margin-top: 8px; font-weight: bold; font-size: 13px;"></div>
+
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <button
+                        type="button"
+                        class="botao-pequeno"
+                        onclick="salvarNovoPrestadorRapidoEdit()"
+                    >
+                        SALVAR PRESTADOR
+                    </button>
+                    <button
+                        type="button"
+                        class="botao-remover"
+                        onclick="fecharCadastroPrestadorRapidoEditar()"
+                    >
+                        CANCELAR
+                    </button>
+                </div>
+            </div>
 
         </div>
 
@@ -894,6 +944,18 @@
                 </span>
 
                 <strong id="totalServicos">
+                    R$ 0,00
+                </strong>
+
+            </div>
+
+            <div class="total-linha" style="font-size: 13px; color: #666; border-top: 1px dashed #ccc; padding-top: 6px; margin-top: 6px;">
+
+                <span>
+                    <i class="fa-solid fa-lock" style="font-size: 11px;"></i> Repasses Totais:
+                </span>
+
+                <strong id="totalRepassesOS" style="color: #c62828;">
                     R$ 0,00
                 </strong>
 
@@ -1124,6 +1186,38 @@ function calcularTotais() {
 
 
     /*
+       REPASSES
+    */
+
+    let totalRepasses = 0;
+
+    document
+        .querySelectorAll(
+            'input[name="servico_repasse"]'
+        )
+        .forEach(function(campo) {
+
+            totalRepasses +=
+                converterParaNumero(
+                    campo.value
+                );
+
+        });
+
+    const elRep = document.getElementById("totalRepassesOS");
+    if (elRep) {
+        elRep.innerText =
+            totalRepasses.toLocaleString(
+                "pt-BR",
+                {
+                    style: "currency",
+                    currency: "BRL"
+                }
+            );
+    }
+
+
+    /*
        EXIBIR TOTAL DE PEÇAS
     */
 
@@ -1313,6 +1407,156 @@ function adicionarPeca() {
 
 
 /* ============================================================
+   PRESTADORES E EXECUTANTES (EDIÇÃO)
+   ============================================================ */
+
+let listaPrestadores = [
+    {% for p in prestadores %}
+    {
+        id: {{ p[0] }},
+        nome: "{{ p[1]|escape }}",
+        tipo: "{{ p[2]|escape }}",
+        funcao: "{{ p[3]|escape if p[3] else '' }}",
+        telefone: "{{ p[4]|escape if p[4] else '' }}",
+        porcentagem: {{ p[5] or 0 }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+function gerarOptionsPrestadoresEditar(selecionado) {
+    if (!listaPrestadores || listaPrestadores.length === 0) {
+        return '<option value="Henrique" data-porcentagem="50">Henrique (Funcionário)</option>';
+    }
+    let html = '';
+    listaPrestadores.forEach(function(p) {
+        let isSel = (p.nome === selecionado || (!selecionado && p.nome === 'Henrique')) ? 'selected' : '';
+        html += `<option value="${p.nome}" data-porcentagem="${p.porcentagem}" ${isSel}>${p.nome} (${p.tipo})</option>`;
+    });
+    return html;
+}
+
+function atualizarRepasseLinhaEditar(selectEl) {
+    let linha = selectEl.closest(".linha-servico");
+    if (!linha) return;
+    let selectedOption = selectEl.options[selectEl.selectedIndex];
+    let porcentagem = selectedOption ? parseFloat(selectedOption.getAttribute("data-porcentagem") || 0) : 0;
+
+    let inputValor = linha.querySelector(".servico-valor");
+    let inputRepasse = linha.querySelector(".servico-repasse");
+
+    if (inputValor && inputRepasse) {
+        let valorServico = converterParaNumero(inputValor.value);
+        let repasseCalculado = valorServico * (porcentagem / 100);
+        inputRepasse.value = repasseCalculado.toFixed(2).replace(".", ",");
+        calcularTotais();
+    }
+}
+
+function atualizarRepassePorValorEditar(inputValorEl) {
+    let linha = inputValorEl.closest(".linha-servico");
+    if (!linha) return;
+    let selectEl = linha.querySelector(".servico-executante");
+    let inputRepasse = linha.querySelector(".servico-repasse");
+    if (selectEl && inputRepasse) {
+        let selectedOption = selectEl.options[selectEl.selectedIndex];
+        let porcentagem = selectedOption ? parseFloat(selectedOption.getAttribute("data-porcentagem") || 0) : 0;
+        let valorServico = converterParaNumero(inputValorEl.value);
+        let repasseCalculado = valorServico * (porcentagem / 100);
+        inputRepasse.value = repasseCalculado.toFixed(2).replace(".", ",");
+    }
+}
+
+function abrirCadastroPrestadorRapidoEditar() {
+    let div = document.getElementById("cadastroPrestadorRapidoEditar");
+    div.style.display = "block";
+    div.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById("novoPrestadorNomeEdit").focus();
+}
+
+function fecharCadastroPrestadorRapidoEditar() {
+    let div = document.getElementById("cadastroPrestadorRapidoEditar");
+    div.style.display = "none";
+    document.getElementById("novoPrestadorNomeEdit").value = "";
+    document.getElementById("novoPrestadorFuncaoEdit").value = "";
+    document.getElementById("novoPrestadorTelefoneEdit").value = "";
+    document.getElementById("erroPrestadorRapidoEdit").style.display = "none";
+}
+
+function ajustarTipoRapidoEdit() {
+    let tipo = document.getElementById("novoPrestadorTipoEdit").value;
+    let repasseInput = document.getElementById("novoPrestadorRepasseEdit");
+    if (tipo === "Terceirizado") {
+        repasseInput.value = "0";
+    } else {
+        repasseInput.value = "50";
+    }
+}
+
+async function salvarNovoPrestadorRapidoEdit() {
+    let nome = document.getElementById("novoPrestadorNomeEdit").value.trim();
+    let tipo = document.getElementById("novoPrestadorTipoEdit").value;
+    let funcao = document.getElementById("novoPrestadorFuncaoEdit").value.trim();
+    let telefone = document.getElementById("novoPrestadorTelefoneEdit").value.trim();
+    let repasse = parseFloat(document.getElementById("novoPrestadorRepasseEdit").value) || 0;
+
+    let erroEl = document.getElementById("erroPrestadorRapidoEdit");
+    erroEl.style.display = "none";
+
+    if (!nome) {
+        erroEl.textContent = "Digite o nome do funcionário ou terceirizado.";
+        erroEl.style.display = "block";
+        return;
+    }
+
+    try {
+        let resp = await fetch("/api/prestadores", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                nome: nome,
+                tipo: tipo,
+                funcao: funcao,
+                telefone: telefone,
+                porcentagem_repasse: repasse
+            })
+        });
+        let data = await resp.json();
+        if (data.sucesso) {
+            let existe = listaPrestadores.find(p => p.nome.toLowerCase() === data.nome.toLowerCase());
+            if (!existe) {
+                listaPrestadores.push({
+                    id: data.id,
+                    nome: data.nome,
+                    tipo: data.tipo,
+                    funcao: data.funcao,
+                    porcentagem: data.porcentagem_repasse
+                });
+            }
+
+            atualizarTodosSelectsPrestadoresEditar(data.nome);
+            fecharCadastroPrestadorRapidoEditar();
+        } else {
+            erroEl.textContent = data.erro || "Erro ao salvar prestador.";
+            erroEl.style.display = "block";
+        }
+    } catch (e) {
+        erroEl.textContent = "Erro de conexão ao salvar prestador.";
+        erroEl.style.display = "block";
+    }
+}
+
+function atualizarTodosSelectsPrestadoresEditar(novoNomeSelecionar) {
+    document.querySelectorAll(".servico-executante").forEach(function(sel) {
+        let valorAtual = sel.value;
+        sel.innerHTML = gerarOptionsPrestadoresEditar(valorAtual || novoNomeSelecionar);
+        if (novoNomeSelecionar && (!valorAtual || sel === document.activeElement)) {
+            sel.value = novoNomeSelecionar;
+            atualizarRepasseLinhaEditar(sel);
+        }
+    });
+}
+
+/* ============================================================
    ADICIONAR SERVIÇO
    ============================================================ */
 
@@ -1331,44 +1575,33 @@ function adicionarServico() {
     div.className =
         "linha-servico";
 
+    let optionsHtml = gerarOptionsPrestadoresEditar();
+
     div.innerHTML = `
 
         <div>
-
-            <label>
-                Serviço
-            </label>
-
-            <input
-                type="text"
-                name="servico_descricao"
-            >
-
+            <label>Serviço</label>
+            <input type="text" name="servico_descricao" required>
         </div>
-
 
         <div>
-
-            <label>
-                Valor
-            </label>
-
-            <input
-                type="text"
-                class="moeda"
-                name="servico_valor"
-                value="0,00"
-                oninput="calcularTotais()"
-            >
-
+            <label>Executante</label>
+            <select name="servico_executante" class="servico-executante" onchange="atualizarRepasseLinhaEditar(this)">
+                ${optionsHtml}
+            </select>
         </div>
 
+        <div>
+            <label>Valor (R$)</label>
+            <input type="text" class="moeda servico-valor" name="servico_valor" value="0,00" oninput="atualizarRepassePorValorEditar(this); calcularTotais()" required>
+        </div>
 
-        <button
-            type="button"
-            class="botao-remover"
-            onclick="removerLinha(this)"
-        >
+        <div>
+            <label>Repasse (R$)</label>
+            <input type="text" class="moeda servico-repasse" name="servico_repasse" value="0,00" oninput="calcularTotais()" title="Valor interno de repasse">
+        </div>
+
+        <button type="button" class="botao-remover" onclick="removerLinha(this)">
             REMOVER
         </button>
 
@@ -1376,6 +1609,11 @@ function adicionarServico() {
 
     container.appendChild(div);
 
+    let sel = div.querySelector(".servico-executante");
+    if (sel) {
+        atualizarRepasseLinhaEditar(sel);
+    }
+    div.querySelector('input[name="servico_descricao"]').focus();
 }
 
 

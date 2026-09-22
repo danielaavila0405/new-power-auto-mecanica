@@ -785,7 +785,7 @@
         <div class="card card-repasse">
 
             <div class="card-titulo">
-                Repasse Henrique
+                Repasses (Equipe e Terceiros)
             </div>
 
             <div class="card-valor">
@@ -1116,6 +1116,104 @@
 
                                 Nenhum faturamento encontrado
                                 no período.
+
+                            </td>
+
+                        </tr>
+
+                    {% endif %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- REPASSES POR PRESTADOR / TERCEIRIZADO -->
+
+    <div class="secao">
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; border: none; padding: 0;">
+                Repasses por Prestador / Terceirizado
+            </h3>
+            <a href="/prestadores" style="background-color: #222222; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-users-gear"></i> Gerenciar Equipe
+            </a>
+        </div>
+
+        <div class="tabela-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Profissional / Parceiro
+                        </th>
+
+                        <th>
+                            Qtd. Serviços
+                        </th>
+
+                        <th>
+                            Volume em Serviços (R$)
+                        </th>
+
+                        <th>
+                            Total Repasse Devido (R$)
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% if repasses_por_executante %}
+
+                        {% for rep in repasses_por_executante %}
+
+                            <tr>
+
+                                <td>
+                                    <strong>{{ rep[0] }}</strong>
+                                </td>
+
+                                <td>
+                                    {{ rep[1] }}
+                                </td>
+
+                                <td>
+                                    R$
+                                    {{ "{:,.2f}".format(rep[2]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                                </td>
+
+                                <td class="valor" style="color: #c62828;">
+
+                                    R$
+                                    {{ "{:,.2f}".format(rep[3]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <tr>
+
+                            <td colspan="4"
+                                style="text-align: center; color: #666666;">
+
+                                Nenhum repasse registrado no período.
 
                             </td>
 

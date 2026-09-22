@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipe e Terceirizados - New Power Auto Mecânica</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1100px;
+            margin: 15px auto;
+            padding: 10px;
+            background-color: #eeeeee;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        /* CABEÇALHO */
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            border-bottom: 3px solid #d71920;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 140px;
+            height: auto;
+            margin-right: 25px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .logo:hover {
+            opacity: 0.85;
+            transform: scale(1.02);
+        }
+
+        .dados-oficina { flex: 1; }
+        .dados-oficina h1 { margin: 0 0 6px 0; font-size: 22px; color: #222222; }
+        .dados-oficina p { margin: 4px 0; font-size: 14px; color: #555555; }
+        .whatsapp { font-weight: bold; }
+        .icone-whatsapp { color: #25D366; font-size: 18px; margin-right: 5px; }
+
+        h2 {
+            color: #222222;
+            border-bottom: 2px solid #d71920;
+            padding-bottom: 6px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* MENSAGENS */
+        .mensagem {
+            padding: 12px 16px;
+            margin: 15px 0;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .mensagem-sucesso { background-color: #e8f5e9; border-left: 5px solid #2e7d32; color: #2e7d32; }
+        .mensagem-erro { background-color: #ffebee; border-left: 5px solid #c62828; color: #c62828; }
+
+        .botoes-topo {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .botao {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: #d71920;
+            color: white;
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .botao:hover { background-color: #b51218; }
+        .botao-secundario { background-color: #222222; }
+        .botao-secundario:hover { background-color: #444444; }
+
+        /* FORMULÁRIO */
+        .card-formulario {
+            background: #fdfdfd;
+            border: 1px solid #ddd;
+            border-left: 4px solid #d71920;
+            border-radius: 6px;
+            padding: 18px 20px;
+            margin-bottom: 25px;
+        }
+
+        .card-formulario h3 {
+            margin: 0 0 14px 0;
+            color: #222;
+            font-size: 17px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .grid-campos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .campo {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .campo label {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .campo label .obrigatorio {
+            color: #d71920;
+        }
+
+        .campo input, .campo select {
+            padding: 9px 11px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            background-color: #fff;
+        }
+
+        .campo input:focus, .campo select:focus {
+            border-color: #d71920;
+            box-shadow: 0 0 4px rgba(215, 25, 32, 0.3);
+        }
+
+        .botoes-form {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* TABELA */
+        .tabela-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #222;
+            color: white;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        tr:hover { background-color: #f9f9f9; }
+
+        /* BADGES */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-funcionario { background-color: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+        .badge-terceirizado { background-color: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; }
+        .badge-ativo { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .badge-inativo { background-color: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        .btn-acao {
+            padding: 4px 9px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-editar { background: #222; color: #fff; }
+        .btn-editar:hover { background: #444; }
+        .btn-desativar { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .btn-desativar:hover { background: #c62828; color: #fff; }
+        .btn-ativar { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .btn-ativar:hover { background: #2e7d32; color: #fff; }
+
+        @media (max-width: 768px) {
+            .cabecalho { flex-direction: column; text-align: center; }
+            .logo { margin-right: 0; margin-bottom: 10px; }
+            .grid-campos { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- CABEÇALHO -->
+    <div class="cabecalho">
+        <a href="/" title="Ir para a Página Inicial">
+            <img src="{{ url_for('static', filename='logo.jpg') }}" class="logo" alt="New Power Auto Mecânica">
+        </a>
+        <div class="dados-oficina">
+            <h1>New Power Auto Mecânica</h1>
+            <p>Rua V-3, Qd. V3, Lt. 18 - Vila Rezende - Goiânia/GO</p>
+            <p class="whatsapp">
+                <span class="icone-whatsapp">●</span> (62) 99117-5451
+            </p>
+        </div>
+    </div>
+
+    <!-- BOTÕES TOPO -->
+    <div class="botoes-topo">
+        <a href="/" class="botao botao-secundario">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Menu
+        </a>
+        <a href="/os" class="botao">
+            <i class="fa-solid fa-file-circle-plus"></i> Nova Ordem de Serviço
+        </a>
+    </div>
+
+    <h2>
+        <span><i class="fa-solid fa-users-gear"></i> Equipe e Prestadores Terceirizados</span>
+    </h2>
+
+    <!-- FEEDBACK -->
+    {% if sucesso %}
+        <div class="mensagem mensagem-sucesso">
+            <i class="fa-solid fa-circle-check"></i> {{ sucesso }}
+        </div>
+    {% endif %}
+
+    {% if mensagem %}
+        <div class="mensagem mensagem-erro">
+            <i class="fa-solid fa-triangle-exclamation"></i> {{ mensagem }}
+        </div>
+    {% endif %}
+
+    <!-- FORMULÁRIO DE CADASTRO / EDIÇÃO -->
+    <div class="card-formulario" id="formCard">
+        <h3 id="formTitulo">
+            <i class="fa-solid fa-user-plus"></i> Cadastrar Novo Funcionário ou Terceirizado
+        </h3>
+
+        <form method="POST" action="/prestadores" id="formPrestador">
+            <input type="hidden" name="id_prestador" id="id_prestador" value="">
+
+            <div class="grid-campos">
+                <div class="campo">
+                    <label for="nome">Nome Completo / Empresa <span class="obrigatorio">*</span></label>
+                    <input type="text" id="nome" name="nome" placeholder="Ex: Henrique, Auto Elétrica Silva" required>
+                </div>
+
+                <div class="campo">
+                    <label for="tipo">Tipo <span class="obrigatorio">*</span></label>
+                    <select id="tipo" name="tipo" required onchange="ajustarTipo()">
+                        <option value="Funcionário">Funcionário Interno</option>
+                        <option value="Terceirizado">Empresa Parceira / Terceirizada</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label for="funcao">Função / Especialidade</label>
+                    <input type="text" id="funcao" name="funcao" placeholder="Ex: Mecânico Geral, Alinhamento, Torno">
+                </div>
+
+                <div class="campo">
+                    <label for="telefone">Telefone / WhatsApp</label>
+                    <input type="text" id="telefone" name="telefone" placeholder="Ex: (62) 99999-9999">
+                </div>
+
+                <div class="campo">
+                    <label for="porcentagem_repasse" id="labelPorcentagem">Comissão / Repasse Padrão (%)</label>
+                    <input type="number" step="0.1" min="0" max="100" id="porcentagem_repasse" name="porcentagem_repasse" value="50" placeholder="50">
+                    <small style="font-size: 11px; color: #666; margin-top: 3px;">
+                        Percentual automático para cada serviço na OS. Pode ser ajustado ou preenchido manualmente em cada linha.
+                    </small>
+                </div>
+            </div>
+
+            <div class="botoes-form">
+                <button type="submit" class="botao" id="btnSalvar">
+                    <i class="fa-solid fa-floppy-disk"></i> Salvar Prestador
+                </button>
+                <button type="button" class="botao botao-secundario" id="btnCancelar" style="display: none;" onclick="cancelarEdicao()">
+                    <i class="fa-solid fa-xmark"></i> Cancelar Edição
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- LISTA DE PRESTADORES -->
+    <h3>
+        <i class="fa-solid fa-list-check"></i> Profissionais e Parceiros Cadastrados
+    </h3>
+
+    <div class="tabela-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Função / Especialidade</th>
+                    <th>Telefone</th>
+                    <th>Repasse Padrão</th>
+                    <th>Status</th>
+                    <th style="text-align: center;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if prestadores %}
+                    {% for p in prestadores %}
+                        <tr style="{% if p[6] == 0 %}opacity: 0.65; background-color: #fafafa;{% endif %}">
+                            <td>
+                                <strong>{{ p[1] }}</strong>
+                            </td>
+                            <td>
+                                {% if p[2] == 'Funcionário' %}
+                                    <span class="badge badge-funcionario"><i class="fa-solid fa-user-tie"></i> Funcionário</span>
+                                {% else %}
+                                    <span class="badge badge-terceirizado"><i class="fa-solid fa-handshake"></i> Terceirizado</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ p[3] or '—' }}</td>
+                            <td>{{ p[4] or '—' }}</td>
+                            <td>
+                                <strong>{{ "%.1f"|format(p[5] or 0) }}%</strong>
+                            </td>
+                            <td>
+                                {% if p[6] == 1 %}
+                                    <span class="badge badge-ativo"><i class="fa-solid fa-check"></i> Ativo</span>
+                                {% else %}
+                                    <span class="badge badge-inativo"><i class="fa-solid fa-ban"></i> Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center;">
+                                <div style="display: inline-flex; gap: 6px;">
+                                    <button type="button" class="btn-acao btn-editar"
+                                            onclick="editarPrestador('{{ p[0] }}', '{{ p[1]|escape }}', '{{ p[2] }}', '{{ p[3]|escape if p[3] else '' }}', '{{ p[4]|escape if p[4] else '' }}', '{{ p[5] or 0 }}')"
+                                            title="Editar dados">
+                                        <i class="fa-solid fa-pen-to-square"></i> Editar
+                                    </button>
+
+                                    <form method="POST" action="/prestadores/{{ p[0] }}/status" style="margin: 0; display: inline;">
+                                        {% if p[6] == 1 %}
+                                            <button type="submit" class="btn-acao btn-desativar" title="Inativar este prestador">
+                                                <i class="fa-solid fa-eye-slash"></i> Desativar
+                                            </button>
+                                        {% else %}
+                                            <button type="submit" class="btn-acao btn-ativar" title="Ativar este prestador">
+                                                <i class="fa-solid fa-circle-check"></i> Ativar
+                                            </button>
+                                        {% endif %}
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #777; padding: 20px;">
+                            Nenhum funcionário ou prestador cadastrado no momento.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    function ajustarTipo() {
+        const tipo = document.getElementById('tipo').value;
+        const repasseInput = document.getElementById('porcentagem_repasse');
+        if (tipo === 'Terceirizado' && repasseInput.value == '50') {
+            repasseInput.value = '0';
+        } else if (tipo === 'Funcionário' && repasseInput.value == '0') {
+            repasseInput.value = '50';
+        }
+    }
+
+    function editarPrestador(id, nome, tipo, funcao, telefone, porcentagem) {
+        document.getElementById('id_prestador').value = id;
+        document.getElementById('nome').value = nome;
+        document.getElementById('tipo').value = tipo;
+        document.getElementById('funcao').value = funcao;
+        document.getElementById('telefone').value = telefone;
+        document.getElementById('porcentagem_repasse').value = porcentagem;
+
+        document.getElementById('formTitulo').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Dados de: <em>' + nome + '</em>';
+        document.getElementById('btnSalvar').innerHTML = '<i class="fa-solid fa-check"></i> Salvar Alterações';
+        document.getElementById('btnCancelar').style.display = 'inline-flex';
+
+        document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelarEdicao() {
+        document.getElementById('id_prestador').value = '';
+        document.getElementById('formPrestador').reset();
+        document.getElementById('formTitulo').innerHTML = '<i class="fa-solid fa-user-plus"></i> Cadastrar Novo Funcionário ou Terceirizado';
+        document.getElementById('btnSalvar').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar Prestador';
+        document.getElementById('btnCancelar').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>

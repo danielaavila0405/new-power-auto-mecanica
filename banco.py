@@ -167,11 +167,41 @@ CREATE TABLE IF NOT EXISTS servicos_os (
     id_os INTEGER NOT NULL,
     descricao TEXT NOT NULL,
     valor REAL NOT NULL,
+    executante TEXT,
+    valor_repasse REAL DEFAULT 0,
 
     FOREIGN KEY (id_os)
         REFERENCES ordens_servico(id_os)
 )
 """)
+
+cursor.execute("PRAGMA table_info(servicos_os)")
+colunas_servicos_os = [c[1] for c in cursor.fetchall()]
+if "executante" not in colunas_servicos_os:
+    cursor.execute("ALTER TABLE servicos_os ADD COLUMN executante TEXT")
+if "valor_repasse" not in colunas_servicos_os:
+    cursor.execute("ALTER TABLE servicos_os ADD COLUMN valor_repasse REAL NOT NULL DEFAULT 0")
+
+# ==================================================
+# TABELA DE PRESTADORES / EQUIPE E TERCEIRIZADOS
+# ==================================================
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS prestadores (
+    id_prestador INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT UNIQUE NOT NULL,
+    tipo TEXT NOT NULL DEFAULT 'Funcionário',
+    funcao TEXT,
+    telefone TEXT,
+    porcentagem_repasse REAL DEFAULT 50.0,
+    ativo INTEGER DEFAULT 1
+)
+""")
+
+# Carga inicial padrão
+cursor.execute("INSERT OR IGNORE INTO prestadores (nome, tipo, funcao, telefone, porcentagem_repasse, ativo) VALUES ('Henrique', 'Funcionário', 'Mecânico Responsável', '', 50.0, 1)")
+cursor.execute("INSERT OR IGNORE INTO prestadores (nome, tipo, funcao, telefone, porcentagem_repasse, ativo) VALUES ('Empresa Terceirizada', 'Terceirizado', 'Serviços Externos / Parcerias', '', 0.0, 1)")
+
 
 # ==================================================
 # TABELA DE SAÍDAS / DESPESAS

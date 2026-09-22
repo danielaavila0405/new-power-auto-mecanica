@@ -183,7 +183,8 @@
             font-size: 14px;
         }
 
-        td input {
+        td input,
+        td select {
             margin-top: 0;
             padding: 7px;
         }
@@ -996,15 +997,23 @@
 
                         <tr>
 
-                            <th>
+                            <th style="width: 38%;">
                                 Serviço
                             </th>
 
-                            <th>
-                                Valor
+                            <th style="width: 25%;">
+                                Executante
                             </th>
 
-                            <th>
+                            <th style="width: 17%;">
+                                Valor (R$)
+                            </th>
+
+                            <th style="width: 15%;">
+                                Repasse (R$)
+                            </th>
+
+                            <th style="width: 5%;">
                             </th>
 
                         </tr>
@@ -1030,6 +1039,25 @@
 
                             </td>
 
+                            <td>
+                                <select
+                                    name="servico_executante"
+                                    class="servico-executante"
+                                    onchange="atualizarRepasseLinha(this)"
+                                >
+                                    {% for p in prestadores %}
+                                    <option
+                                        value="{{ p[1] }}"
+                                        data-porcentagem="{{ p[5] or 0 }}"
+                                        {% if servico.executante == p[1] or (not servico.executante and p[1] == 'Henrique') %}
+                                        selected
+                                        {% endif %}
+                                    >
+                                        {{ p[1] }} ({{ p[2] }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
 
                             <td>
 
@@ -1038,12 +1066,26 @@
                                     name="servico_valor"
                                     value="{{ 'R$ %.2f'|format(servico.valor) }}"
                                     class="servico-valor moeda"
-                                    oninput="calcularTotais()" onblur="formatarCampoMoeda(this); calcularTotais()"
+                                    oninput="atualizarRepassePorValor(this); calcularTotais()"
+                                    onblur="formatarCampoMoeda(this); calcularTotais()"
                                     required
                                 >
 
                             </td>
 
+                            <td>
+
+                                <input
+                                    type="text"
+                                    name="servico_repasse"
+                                    value="{{ 'R$ %.2f'|format(servico.valor_repasse or 0) }}"
+                                    class="servico-repasse moeda"
+                                    oninput="calcularTotais()"
+                                    onblur="formatarCampoMoeda(this); calcularTotais()"
+                                    title="Valor interno de repasse para este profissional"
+                                >
+
+                            </td>
 
                             <td>
 
@@ -1069,13 +1111,85 @@
                 </table>
 
 
-                <button
-                    type="button"
-                    class="botao-adicionar"
-                    onclick="adicionarServico()"
+                <div style="display: flex; gap: 10px; margin-top: 7px; flex-wrap: wrap;">
+                    <button
+                        type="button"
+                        class="botao-adicionar"
+                        onclick="adicionarServico()"
+                        style="margin-top: 0;"
+                    >
+                        + Adicionar serviço
+                    </button>
+
+                    <button
+                        type="button"
+                        class="botao-pequeno"
+                        onclick="abrirCadastroPrestadorRapido()"
+                        style="display: inline-flex; align-items: center; gap: 5px;"
+                    >
+                        <i class="fa-solid fa-user-plus"></i> + Novo Prestador
+                    </button>
+                </div>
+
+                <!-- CADASTRO RÁPIDO PRESTADOR -->
+                <div
+                    id="cadastroPrestadorRapido"
+                    class="cadastro-rapido"
+                    style="display: none; margin-top: 12px;"
                 >
-                    + Adicionar serviço
-                </button>
+                    <strong>
+                        <i class="fa-solid fa-users-gear"></i> Cadastrar novo membro da equipe ou parceiro terceirizado
+                    </strong>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 8px;">
+                        <div>
+                            <label>Nome / Empresa *</label>
+                            <input type="text" id="novoPrestadorNome" placeholder="Ex: Auto Elétrica Silva">
+                        </div>
+
+                        <div>
+                            <label>Tipo *</label>
+                            <select id="novoPrestadorTipo" onchange="ajustarTipoRapido()">
+                                <option value="Funcionário">Funcionário Interno</option>
+                                <option value="Terceirizado" selected>Empresa Terceirizada</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label>Função / Especialidade</label>
+                            <input type="text" id="novoPrestadorFuncao" placeholder="Ex: Alinhamento, Torno">
+                        </div>
+
+                        <div>
+                            <label>Telefone / WhatsApp</label>
+                            <input type="text" id="novoPrestadorTelefone" placeholder="(62) 99999-9999">
+                        </div>
+
+                        <div>
+                            <label>Repasse Padrão (%)</label>
+                            <input type="number" step="0.1" id="novoPrestadorRepasse" value="0">
+                        </div>
+                    </div>
+
+                    <div id="erroPrestadorRapido" class="mensagem-erro" style="display: none; margin-top: 8px;"></div>
+
+                    <div style="margin-top: 10px; display: flex; gap: 8px;">
+                        <button
+                            type="button"
+                            class="botao-salvar-rapido"
+                            onclick="salvarNovoPrestadorRapido()"
+                        >
+                            SALVAR PRESTADOR
+                        </button>
+                        <button
+                            type="button"
+                            class="botao-cancelar-rapido"
+                            onclick="fecharCadastroPrestadorRapido()"
+                        >
+                            CANCELAR
+                        </button>
+                    </div>
+                </div>
 
 
             </div>
@@ -1210,6 +1324,18 @@
                         </span>
 
                         <span id="totalServicos">
+                            R$ 0,00
+                        </span>
+
+                    </div>
+
+                    <div class="linha-resumo" style="font-size: 13px; color: #666; border-top: 1px dashed #ddd; padding-top: 5px; margin-top: 5px;">
+
+                        <span>
+                            <i class="fa-solid fa-lock" style="font-size: 11px;"></i> Repasses Totais:
+                        </span>
+
+                        <span id="totalRepassesOS" style="font-weight: bold; color: #c62828;">
                             R$ 0,00
                         </span>
 
@@ -2213,6 +2339,155 @@ function adicionarPeca() {
 
 
 // ==================================================
+// PRESTADORES E EXECUTANTES
+// ==================================================
+
+let listaPrestadores = [
+    {% for p in prestadores %}
+    {
+        id: {{ p[0] }},
+        nome: "{{ p[1]|escape }}",
+        tipo: "{{ p[2]|escape }}",
+        funcao: "{{ p[3]|escape if p[3] else '' }}",
+        telefone: "{{ p[4]|escape if p[4] else '' }}",
+        porcentagem: {{ p[5] or 0 }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+function gerarOptionsPrestadores(selecionado) {
+    if (!listaPrestadores || listaPrestadores.length === 0) {
+        return '<option value="Henrique" data-porcentagem="50">Henrique (Funcionário)</option>';
+    }
+    let html = '';
+    listaPrestadores.forEach(function(p) {
+        let isSel = (p.nome === selecionado || (!selecionado && p.nome === 'Henrique')) ? 'selected' : '';
+        html += `<option value="${p.nome}" data-porcentagem="${p.porcentagem}" ${isSel}>${p.nome} (${p.tipo})</option>`;
+    });
+    return html;
+}
+
+function atualizarRepasseLinha(selectEl) {
+    let linha = selectEl.closest("tr");
+    if (!linha) return;
+    let selectedOption = selectEl.options[selectEl.selectedIndex];
+    let porcentagem = selectedOption ? parseFloat(selectedOption.getAttribute("data-porcentagem") || 0) : 0;
+
+    let inputValor = linha.querySelector(".servico-valor");
+    let inputRepasse = linha.querySelector(".servico-repasse");
+
+    if (inputValor && inputRepasse) {
+        let valorServico = valorNumerico(inputValor.value);
+        let repasseCalculado = valorServico * (porcentagem / 100);
+        inputRepasse.value = formatarMoeda(repasseCalculado);
+    }
+}
+
+function atualizarRepassePorValor(inputValorEl) {
+    let linha = inputValorEl.closest("tr");
+    if (!linha) return;
+    let selectEl = linha.querySelector(".servico-executante");
+    let inputRepasse = linha.querySelector(".servico-repasse");
+    if (selectEl && inputRepasse) {
+        let selectedOption = selectEl.options[selectEl.selectedIndex];
+        let porcentagem = selectedOption ? parseFloat(selectedOption.getAttribute("data-porcentagem") || 0) : 0;
+        let valorServico = valorNumerico(inputValorEl.value);
+        let repasseCalculado = valorServico * (porcentagem / 100);
+        inputRepasse.value = formatarMoeda(repasseCalculado);
+    }
+}
+
+function abrirCadastroPrestadorRapido() {
+    let div = document.getElementById("cadastroPrestadorRapido");
+    div.style.display = "block";
+    div.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById("novoPrestadorNome").focus();
+}
+
+function fecharCadastroPrestadorRapido() {
+    let div = document.getElementById("cadastroPrestadorRapido");
+    div.style.display = "none";
+    document.getElementById("novoPrestadorNome").value = "";
+    document.getElementById("novoPrestadorFuncao").value = "";
+    document.getElementById("novoPrestadorTelefone").value = "";
+    document.getElementById("erroPrestadorRapido").style.display = "none";
+}
+
+function ajustarTipoRapido() {
+    let tipo = document.getElementById("novoPrestadorTipo").value;
+    let repasseInput = document.getElementById("novoPrestadorRepasse");
+    if (tipo === "Terceirizado") {
+        repasseInput.value = "0";
+    } else {
+        repasseInput.value = "50";
+    }
+}
+
+async function salvarNovoPrestadorRapido() {
+    let nome = document.getElementById("novoPrestadorNome").value.trim();
+    let tipo = document.getElementById("novoPrestadorTipo").value;
+    let funcao = document.getElementById("novoPrestadorFuncao").value.trim();
+    let telefone = document.getElementById("novoPrestadorTelefone").value.trim();
+    let repasse = parseFloat(document.getElementById("novoPrestadorRepasse").value) || 0;
+
+    let erroEl = document.getElementById("erroPrestadorRapido");
+    erroEl.style.display = "none";
+
+    if (!nome) {
+        erroEl.textContent = "Digite o nome do funcionário ou terceirizado.";
+        erroEl.style.display = "block";
+        return;
+    }
+
+    try {
+        let resp = await fetch("/api/prestadores", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                nome: nome,
+                tipo: tipo,
+                funcao: funcao,
+                telefone: telefone,
+                porcentagem_repasse: repasse
+            })
+        });
+        let data = await resp.json();
+        if (data.sucesso) {
+            let existe = listaPrestadores.find(p => p.nome.toLowerCase() === data.nome.toLowerCase());
+            if (!existe) {
+                listaPrestadores.push({
+                    id: data.id,
+                    nome: data.nome,
+                    tipo: data.tipo,
+                    funcao: data.funcao,
+                    porcentagem: data.porcentagem_repasse
+                });
+            }
+
+            atualizarTodosSelectsPrestadores(data.nome);
+            fecharCadastroPrestadorRapido();
+        } else {
+            erroEl.textContent = data.erro || "Erro ao salvar prestador.";
+            erroEl.style.display = "block";
+        }
+    } catch (e) {
+        erroEl.textContent = "Erro de conexão ao salvar prestador.";
+        erroEl.style.display = "block";
+    }
+}
+
+function atualizarTodosSelectsPrestadores(novoNomeSelecionar) {
+    document.querySelectorAll(".servico-executante").forEach(function(sel) {
+        let valorAtual = sel.value;
+        sel.innerHTML = gerarOptionsPrestadores(valorAtual || novoNomeSelecionar);
+        if (novoNomeSelecionar && (!valorAtual || sel === document.activeElement)) {
+            sel.value = novoNomeSelecionar;
+            atualizarRepasseLinha(sel);
+        }
+    });
+}
+
+// ==================================================
 // ADICIONAR SERVIÇO
 // ==================================================
 
@@ -2223,10 +2498,10 @@ function adicionarServico() {
             "#tabelaServicos tbody"
         );
 
-
     let linha =
         document.createElement("tr");
 
+    let optionsHtml = gerarOptionsPrestadores();
 
     linha.innerHTML = `
 
@@ -2242,6 +2517,15 @@ function adicionarServico() {
 
         </td>
 
+        <td>
+            <select
+                name="servico_executante"
+                class="servico-executante"
+                onchange="atualizarRepasseLinha(this)"
+            >
+                ${optionsHtml}
+            </select>
+        </td>
 
         <td>
 
@@ -2250,12 +2534,26 @@ function adicionarServico() {
                 name="servico_valor"
                 value="R$ 0,00"
                 class="servico-valor moeda"
-                oninput="calcularTotais()" onblur="formatarCampoMoeda(this); calcularTotais()"
+                oninput="atualizarRepassePorValor(this); calcularTotais()"
+                onblur="formatarCampoMoeda(this); calcularTotais()"
                 required
             >
 
         </td>
 
+        <td>
+
+            <input
+                type="text"
+                name="servico_repasse"
+                value="R$ 0,00"
+                class="servico-repasse moeda"
+                oninput="calcularTotais()"
+                onblur="formatarCampoMoeda(this); calcularTotais()"
+                title="Valor interno de repasse para este profissional"
+            >
+
+        </td>
 
         <td>
 
@@ -2274,13 +2572,16 @@ function adicionarServico() {
 
     `;
 
-
     tabela.appendChild(linha);
-
 
     linha
         .querySelector(".servico-descricao")
         .focus();
+
+    let selectEl = linha.querySelector(".servico-executante");
+    if (selectEl) {
+        atualizarRepasseLinha(selectEl);
+    }
 }
 
 
@@ -2438,6 +2739,8 @@ function calcularTotais() {
         );
 
 
+    let totalRepasses = 0;
+
     servicos.forEach(
         function(linha) {
 
@@ -2450,8 +2753,16 @@ function calcularTotais() {
                     .value
                 );
 
+            let repasse =
+                valorNumerico(
+                    linha
+                    .querySelector(
+                        ".servico-repasse"
+                    ) ? linha.querySelector(".servico-repasse").value : 0
+                );
 
             totalServicos += valor;
+            totalRepasses += repasse;
 
         }
     );
@@ -2472,6 +2783,12 @@ function calcularTotais() {
         .getElementById("totalServicos")
         .textContent =
         formatarMoeda(totalServicos);
+
+
+    const elRepasse = document.getElementById("totalRepassesOS");
+    if (elRepasse) {
+        elRepasse.textContent = formatarMoeda(totalRepasses);
+    }
 
 
     document

@@ -573,6 +573,10 @@
                     </th>
 
                     <th>
+                        Executante
+                    </th>
+
+                    <th>
                         Valor
                     </th>
 
@@ -588,6 +592,12 @@
 
                     <td>
                         {{ servico[0] }}
+                    </td>
+
+                    <td>
+                        <span style="background: #eef2f7; color: #1e3a8a; padding: 2px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; border: 1px solid #dbeafe;">
+                            <i class="fa-solid fa-user-gear" style="font-size: 11px;"></i> {{ servico[2] or os[9] or "Henrique" }}
+                        </span>
                     </td>
 
                     <td>
@@ -681,9 +691,23 @@
 
         <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
             <div>
-                Responsável pelo Serviço: <strong>{{ os[9] or "Não informado" }}</strong>
-                {% if os[9] == "Henrique" %}
-                    <br>Repasse de Mão de Obra (50%): <strong style="color: #c62828;">R$ {{ "%.2f"|format(os[14]) }}</strong>
+                Responsável Principal: <strong>{{ os[9] or "Não informado" }}</strong>
+                {% if repasses_por_executante %}
+                    <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f5c6cb;">
+                        <span style="font-size: 12px; color: #666; font-weight: bold; text-transform: uppercase;">Repasses por Prestador:</span>
+                        <ul style="margin: 4px 0 0 16px; padding: 0;">
+                            {% for prest, valor_rep in repasses_por_executante.items() %}
+                            <li style="margin-bottom: 2px;">
+                                {{ prest }}: <strong style="color: #c62828;">R$ {{ "%.2f"|format(valor_rep) }}</strong>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div style="margin-top: 4px; font-size: 12px;">
+                            Total Repasses: <strong style="color: #c62828;">R$ {{ "%.2f"|format(os[14]) }}</strong>
+                        </div>
+                    </div>
+                {% elif os[14] and os[14] > 0 %}
+                    <br>Total Repasses: <strong style="color: #c62828;">R$ {{ "%.2f"|format(os[14]) }}</strong>
                 {% endif %}
             </div>
 

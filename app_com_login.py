@@ -259,7 +259,50 @@ def garantir_tabelas_sistema():
             cursor.execute("INSERT OR IGNORE INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (cat_existente,))
 
 
+    # Tabela de Prestadores / Equipe e Terceirizados
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS prestadores (
+            id_prestador INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT UNIQUE NOT NULL,
+            tipo TEXT NOT NULL DEFAULT 'Funcionário',
+            funcao TEXT,
+            telefone TEXT,
+            porcentagem_repasse REAL DEFAULT 50.0,
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    cursor.execute("INSERT OR IGNORE INTO prestadores (nome, tipo, funcao, telefone, porcentagem_repasse, ativo) VALUES ('Henrique', 'Funcionário', 'Mecânico Responsável', '', 50.0, 1)")
+    cursor.execute("INSERT OR IGNORE INTO prestadores (nome, tipo, funcao, telefone, porcentagem_repasse, ativo) VALUES ('Empresa Terceirizada', 'Terceirizado', 'Serviços Externos / Parcerias', '', 0.0, 1)")
+
     # Migrações graduais de colunas para bancos existentes
+    cursor.execute("PRAGMA table_info(servicos_os)")
+    colunas_servicos_os = [c[1] for c in cursor.fetchall()]
+    if "executante" not in colunas_servicos_os:
+        cursor.execute("ALTER TABLE servicos_os ADD COLUMN executante TEXT")
+    if "valor_repasse" not in colunas_servicos_os:
+        cursor.execute("ALTER TABLE servicos_os ADD COLUMN valor_repasse REAL NOT NULL DEFAULT 0")
+
+    # Retrocompatibilidade: preencher executante e valor_repasse em serviços antigos
+    try:
+        cursor.execute("""
+            UPDATE servicos_os
+            SET executante = (
+                SELECT COALESCE(ordens_servico.responsavel, 'Henrique')
+                FROM ordens_servico
+                WHERE ordens_servico.id_os = servicos_os.id_os
+            )
+            WHERE executante IS NULL OR TRIM(executante) = ''
+        """)
+        cursor.execute("""
+            UPDATE servicos_os
+            SET valor_repasse = valor * 0.5
+            WHERE (valor_repasse IS NULL OR valor_repasse = 0)
+              AND LOWER(executante) = 'henrique'
+        """)
+    except Exception:
+        pass
+
     cursor.execute("PRAGMA table_info(usuarios)")
     colunas_usr = [linha[1] for linha in cursor.fetchall()]
     if "senha_temporaria" not in colunas_usr:
@@ -731,6 +774,171 @@ def api_pecas():
     ]
     conexao.close()
     return jsonify(dados)
+
+
+# ============================================================
+# EQUIPE E PRESTADORES DE SERVIÇO (FUNCIONÁRIOS E TERCEIRIZADOS)
+# ============================================================
+
+@app.route("/prestadores", methods=["GET", "POST"])
+def gerenciar_prestadores():
+    mensagem = request.args.get("mensagem", "")
+    sucesso = request.args.get("sucesso", "")
+
+    if request.method == "POST":
+        id_prestador = request.form.get("id_prestador", "").strip()
+        nome = request.form.get("nome", "").strip()
+        tipo = request.form.get("tipo", "Funcionário").strip()
+        funcao = request.form.get("funcao", "").strip()
+        telefone = request.form.get("telefone", "").strip()
+        porcentagem = converter_para_float(request.form.get("porcentagem_repasse", 50))
+
+        if not nome:
+            mensagem = "O nome do funcionário ou empresa terceirizada é obrigatório."
+        else:
+            conexao = conectar_banco()
+            cursor = conexao.cursor()
+            if id_prestador:
+                try:
+                    cursor.execute("""
+                        UPDATE prestadores
+                        SET nome = ?, tipo = ?, funcao = ?, telefone = ?, porcentagem_repasse = ?
+                        WHERE id_prestador = ?
+                    """, (nome, tipo, funcao, telefone, porcentagem, id_prestador))
+                    conexao.commit()
+                    conexao.close()
+                    return redirect("/prestadores?sucesso=Dados+do+prestador+atualizados+com+sucesso!")
+                except sqlite3.IntegrityError:
+                    conexao.close()
+                    mensagem = "Já existe outro funcionário ou empresa cadastrada com este nome."
+            else:
+                try:
+                    cursor.execute("""
+                        INSERT INTO prestadores (nome, tipo, funcao, telefone, porcentagem_repasse, ativo)
+                        VALUES (?, ?, ?, ?, ?, 1)
+                    """, (nome, tipo, funcao, telefone, porcentagem))
+                    conexao.commit()
+                    conexao.close()
+                    return redirect("/prestadores?sucesso=Prestador+cadastrado+com+sucesso!")
+                except sqlite3.IntegrityError:
+                    cursor.execute("""
+                        UPDATE prestadores
+                        SET ativo = 1, tipo = ?, funcao = ?, telefone = ?, porcentagem_repasse = ?
+                        WHERE LOWER(nome) = LOWER(?)
+                    """, (tipo, funcao, telefone, porcentagem, nome))
+                    conexao.commit()
+                    conexao.close()
+                    return redirect("/prestadores?sucesso=Prestador+reativado+com+sucesso!")
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    cursor.execute("""
+        SELECT id_prestador, nome, tipo, funcao, telefone, porcentagem_repasse, ativo
+        FROM prestadores
+        ORDER BY ativo DESC, nome COLLATE NOCASE ASC
+    """)
+    lista_prestadores = cursor.fetchall()
+    conexao.close()
+
+    return render_template(
+        "prestadores.html",
+        prestadores=lista_prestadores,
+        mensagem=mensagem,
+        sucesso=sucesso
+    )
+
+
+@app.route("/prestadores/<int:id_prestador>/status", methods=["POST"])
+def alternar_status_prestador(id_prestador):
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+    cursor.execute("SELECT ativo FROM prestadores WHERE id_prestador = ?", (id_prestador,))
+    linha = cursor.fetchone()
+    if linha:
+        novo_status = 0 if linha[0] == 1 else 1
+        cursor.execute("UPDATE prestadores SET ativo = ? WHERE id_prestador = ?", (novo_status, id_prestador))
+        conexao.commit()
+    conexao.close()
+    return redirect("/prestadores?sucesso=Status+atualizado+com+sucesso!")
+
+
+@app.route("/api/prestadores", methods=["GET", "POST"])
+def api_prestadores():
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    if request.method == "POST":
+        dados = request.get_json(silent=True) or {}
+        nome = (dados.get("nome") or request.form.get("nome", "")).strip()
+        tipo = (dados.get("tipo") or request.form.get("tipo", "Funcionário")).strip()
+        funcao = (dados.get("funcao") or request.form.get("funcao", "")).strip()
+        telefone = (dados.get("telefone") or request.form.get("telefone", "")).strip()
+        porcentagem = converter_para_float(dados.get("porcentagem_repasse") or request.form.get("porcentagem_repasse", 50))
+
+        if not nome:
+            conexao.close()
+            return jsonify({"sucesso": False, "erro": "O nome é obrigatório."}), 400
+
+        try:
+            cursor.execute("""
+                INSERT INTO prestadores (nome, tipo, funcao, telefone, porcentagem_repasse, ativo)
+                VALUES (?, ?, ?, ?, ?, 1)
+            """, (nome, tipo, funcao, telefone, porcentagem))
+            conexao.commit()
+            id_p = cursor.lastrowid
+            conexao.close()
+            return jsonify({
+                "sucesso": True,
+                "id": id_p,
+                "nome": nome,
+                "tipo": tipo,
+                "funcao": funcao,
+                "porcentagem_repasse": porcentagem,
+                "mensagem": "Prestador cadastrado com sucesso!"
+            })
+        except sqlite3.IntegrityError:
+            cursor.execute("""
+                UPDATE prestadores SET ativo = 1, tipo = ?, funcao = ?, telefone = ?, porcentagem_repasse = ?
+                WHERE LOWER(nome) = LOWER(?)
+            """, (tipo, funcao, telefone, porcentagem, nome))
+            conexao.commit()
+            cursor.execute("SELECT id_prestador FROM prestadores WHERE LOWER(nome) = LOWER(?)", (nome,))
+            r = cursor.fetchone()
+            id_p = r[0] if r else None
+            conexao.close()
+            return jsonify({
+                "sucesso": True,
+                "id": id_p,
+                "nome": nome,
+                "tipo": tipo,
+                "funcao": funcao,
+                "porcentagem_repasse": porcentagem,
+                "mensagem": "Prestador já cadastrado e ativado!"
+            })
+        except Exception as e:
+            conexao.close()
+            return jsonify({"sucesso": False, "erro": str(e)}), 500
+
+    cursor.execute("""
+        SELECT id_prestador, nome, tipo, funcao, telefone, porcentagem_repasse
+        FROM prestadores
+        WHERE ativo = 1
+        ORDER BY nome COLLATE NOCASE ASC
+    """)
+    linhas = cursor.fetchall()
+    conexao.close()
+    resultado = [
+        {
+            "id": r[0],
+            "nome": r[1],
+            "tipo": r[2],
+            "funcao": r[3],
+            "telefone": r[4],
+            "porcentagem_repasse": r[5]
+        }
+        for r in linhas
+    ]
+    return jsonify(resultado)
 
 
 # ============================================================
@@ -1494,9 +1702,27 @@ def nova_os():
             "servico_valor"
         )
 
+        executantes_servicos = request.form.getlist(
+            "servico_executante"
+        )
+
+        repasses_servicos = request.form.getlist(
+            "servico_repasse"
+        )
+
+        cursor.execute("""
+            SELECT id_prestador, nome, tipo, funcao, telefone, porcentagem_repasse
+            FROM prestadores
+            WHERE ativo = 1
+            ORDER BY nome COLLATE NOCASE ASC
+        """)
+        prestadores_db = cursor.fetchall()
+        mapa_comissoes = {p[1].lower(): (p[5] if p[5] is not None else 0.0) for p in prestadores_db}
+
         total_pecas = 0
         total_custo_pecas = 0
         total_servicos = 0
+        total_repasse_os = 0
 
         for i in range(len(pecas)):
 
@@ -1542,9 +1768,24 @@ def nova_os():
 
             total_servicos += valor
 
+            executante = executantes_servicos[i].strip() if i < len(executantes_servicos) else ""
+            if not executante:
+                executante = responsavel_selecionado.strip() if responsavel_selecionado else "Henrique"
+
+            repasse_digitado = repasses_servicos[i] if i < len(repasses_servicos) else ""
+            if repasse_digitado != "" and repasse_digitado is not None:
+                repasse_val = converter_para_float(repasse_digitado)
+            else:
+                pct = mapa_comissoes.get(executante.lower(), 50.0 if executante.lower() == "henrique" else 0.0)
+                repasse_val = valor * (pct / 100.0)
+
+            total_repasse_os += repasse_val
+
             servicos_salvos.append({
                 "descricao": servicos[i].strip(),
-                "valor": valor
+                "valor": valor,
+                "executante": executante,
+                "valor_repasse": repasse_val
             })
 
         valor_total = (
@@ -1552,15 +1793,7 @@ def nova_os():
             total_servicos
         )
 
-        if responsavel_selecionado == "Henrique":
-
-            valor_repasse = (
-                total_servicos * 0.50
-            )
-
-        else:
-
-            valor_repasse = 0
+        valor_repasse = total_repasse_os
 
         cursor.execute("""
             INSERT INTO ordens_servico
@@ -1621,13 +1854,17 @@ def nova_os():
                 (
                     id_os,
                     descricao,
-                    valor
+                    valor,
+                    executante,
+                    valor_repasse
                 )
-                VALUES (?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
             """, (
                 id_os,
                 servico["descricao"],
-                servico["valor"]
+                servico["valor"],
+                servico.get("executante", "Henrique"),
+                servico.get("valor_repasse", 0.0)
             ))
 
         conexao.commit()
@@ -1671,6 +1908,14 @@ def nova_os():
 
     lista_pecas_catalogo = cursor.fetchall()
 
+    cursor.execute("""
+        SELECT id_prestador, nome, tipo, funcao, telefone, porcentagem_repasse
+        FROM prestadores
+        WHERE ativo = 1
+        ORDER BY nome COLLATE NOCASE
+    """)
+    lista_prestadores = cursor.fetchall()
+
     conexao.close()
 
     return render_template(
@@ -1678,6 +1923,7 @@ def nova_os():
         clientes=lista_clientes,
         veiculos=lista_veiculos,
         pecas_catalogo=lista_pecas_catalogo,
+        prestadores=lista_prestadores,
         mensagem=mensagem,
         pecas_salvas=pecas_salvas,
         servicos_salvos=servicos_salvos,
@@ -2119,7 +2365,9 @@ def visualizar_os(id_os):
     cursor.execute("""
         SELECT
             descricao,
-            valor
+            valor,
+            COALESCE(executante, ''),
+            COALESCE(valor_repasse, 0)
         FROM servicos_os
 
         WHERE id_os = ?
@@ -2138,6 +2386,15 @@ def visualizar_os(id_os):
     repasse = float(os_dados[14] or 0)
     lucro_oficina_os = total_os - repasse - custo_pecas
 
+    repasses_por_executante = {}
+    for s in servicos:
+        executante = s[2].strip() if s[2] else (os_dados[9] or "Henrique")
+        rep = float(s[3] or 0.0)
+        repasses_por_executante[executante] = repasses_por_executante.get(executante, 0.0) + rep
+
+    if not repasses_por_executante and repasse > 0:
+        repasses_por_executante[os_dados[9] or "Henrique"] = repasse
+
     mensagem = request.args.get(
         "mensagem",
         ""
@@ -2151,6 +2408,7 @@ def visualizar_os(id_os):
         custo_pecas=custo_pecas,
         lucro_pecas=lucro_pecas,
         lucro_oficina_os=lucro_oficina_os,
+        repasses_por_executante=repasses_por_executante,
         mensagem=mensagem
     )
 
@@ -3037,9 +3295,27 @@ def editar_os(id_os):
             "servico_valor"
         )
 
+        executantes_servicos = request.form.getlist(
+            "servico_executante"
+        )
+
+        repasses_servicos = request.form.getlist(
+            "servico_repasse"
+        )
+
+        cursor.execute("""
+            SELECT id_prestador, nome, tipo, funcao, telefone, porcentagem_repasse
+            FROM prestadores
+            WHERE ativo = 1
+            ORDER BY nome COLLATE NOCASE ASC
+        """)
+        prestadores_db = cursor.fetchall()
+        mapa_comissoes = {p[1].lower(): (p[5] if p[5] is not None else 0.0) for p in prestadores_db}
+
         total_pecas = 0
         total_custo_pecas = 0
         total_servicos = 0
+        total_repasse_os = 0
 
         pecas_salvas = []
         servicos_salvos = []
@@ -3092,9 +3368,24 @@ def editar_os(id_os):
 
             total_servicos += valor
 
+            executante = executantes_servicos[i].strip() if i < len(executantes_servicos) else ""
+            if not executante:
+                executante = responsavel.strip() if responsavel else "Henrique"
+
+            repasse_digitado = repasses_servicos[i] if i < len(repasses_servicos) else ""
+            if repasse_digitado != "" and repasse_digitado is not None:
+                repasse_val = converter_para_float(repasse_digitado)
+            else:
+                pct = mapa_comissoes.get(executante.lower(), 50.0 if executante.lower() == "henrique" else 0.0)
+                repasse_val = valor * (pct / 100.0)
+
+            total_repasse_os += repasse_val
+
             servicos_salvos.append({
                 "descricao": descricao,
-                "valor": valor
+                "valor": valor,
+                "executante": executante,
+                "valor_repasse": repasse_val
             })
 
         valor_total = (
@@ -3102,15 +3393,7 @@ def editar_os(id_os):
             total_servicos
         )
 
-        if responsavel == "Henrique":
-
-            valor_repasse = (
-                total_servicos * 0.50
-            )
-
-        else:
-
-            valor_repasse = 0
+        valor_repasse = total_repasse_os
 
         cursor.execute("""
             UPDATE ordens_servico
@@ -3181,13 +3464,17 @@ def editar_os(id_os):
                 (
                     id_os,
                     descricao,
-                    valor
+                    valor,
+                    executante,
+                    valor_repasse
                 )
-                VALUES (?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
             """, (
                 id_os,
                 servico["descricao"],
-                servico["valor"]
+                servico["valor"],
+                servico["executante"],
+                servico["valor_repasse"]
             ))
 
         conexao.commit()
@@ -3239,7 +3526,9 @@ def editar_os(id_os):
     cursor.execute("""
         SELECT
             descricao,
-            valor
+            valor,
+            COALESCE(executante, ''),
+            COALESCE(valor_repasse, 0)
         FROM servicos_os
         WHERE id_os = ?
         ORDER BY id_servico
@@ -3255,6 +3544,14 @@ def editar_os(id_os):
     """)
     lista_pecas_catalogo = cursor.fetchall()
 
+    cursor.execute("""
+        SELECT id_prestador, nome, tipo, funcao, telefone, porcentagem_repasse
+        FROM prestadores
+        WHERE ativo = 1
+        ORDER BY nome COLLATE NOCASE
+    """)
+    lista_prestadores = cursor.fetchall()
+
     conexao.close()
 
     return render_template(
@@ -3264,7 +3561,8 @@ def editar_os(id_os):
         veiculos=lista_veiculos,
         pecas=pecas,
         servicos=servicos,
-        pecas_catalogo=lista_pecas_catalogo
+        pecas_catalogo=lista_pecas_catalogo,
+        prestadores=lista_prestadores
     )
 
 
@@ -3463,6 +3761,29 @@ def financeiro():
 
     responsaveis = cursor.fetchall()
 
+    # ========================================================
+    # REPASSES POR EXECUTANTE / PRESTADOR
+    # ========================================================
+
+    filtro_data_servicos = ""
+    if data_inicio and data_fim:
+        filtro_data_servicos = "AND date(ordens_servico.data) BETWEEN date(?) AND date(?)"
+
+    cursor.execute(f"""
+        SELECT
+            COALESCE(NULLIF(TRIM(servicos_os.executante), ''), ordens_servico.responsavel, 'Henrique') as prestador,
+            COUNT(servicos_os.id_servico),
+            COALESCE(SUM(servicos_os.valor), 0),
+            COALESCE(SUM(servicos_os.valor_repasse), 0)
+        FROM servicos_os
+        INNER JOIN ordens_servico ON servicos_os.id_os = ordens_servico.id_os
+        WHERE ordens_servico.status = 'Finalizada'
+        {filtro_data_servicos}
+        GROUP BY prestador
+        ORDER BY SUM(servicos_os.valor_repasse) DESC
+    """, parametros)
+    repasses_por_executante = cursor.fetchall()
+
     conexao.close()
 
     return render_template(
@@ -3482,7 +3803,8 @@ def financeiro():
         data_inicio=data_inicio,
         data_fim=data_fim,
         pagamentos=pagamentos,
-        responsaveis=responsaveis
+        responsaveis=responsaveis,
+        repasses_por_executante=repasses_por_executante
     )
 
 # ============================================================
