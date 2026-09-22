@@ -869,6 +869,10 @@
                             Total Gasto
                         </th>
 
+                        <th style="text-align: center;">
+                            Ação
+                        </th>
+
                     </tr>
 
                 </thead>
@@ -897,6 +901,15 @@
 
                                 </td>
 
+                                <td style="text-align: center;">
+                                    <a href="/despesas?categoria_filtro={{ desp[0] }}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}"
+                                       class="botao botao-secundario"
+                                       style="padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; text-decoration: none;"
+                                       title="Ver lançamentos detalhados de {{ desp[0] }}">
+                                        <i class="fa-solid fa-eye"></i> Ver Lançamentos
+                                    </a>
+                                </td>
+
                             </tr>
 
                         {% endfor %}
@@ -905,7 +918,7 @@
 
                         <tr>
 
-                            <td colspan="3"
+                            <td colspan="4"
                                 style="text-align: center; color: #666666;">
 
                                 Nenhuma despesa registrada no período.

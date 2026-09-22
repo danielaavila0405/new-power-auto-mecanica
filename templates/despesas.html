@@ -234,13 +234,143 @@
 
         .categoria-badge {
             display: inline-block;
-            padding: 3px 8px;
+            padding: 4px 9px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: bold;
             background: #e3f2fd;
             color: #1565c0;
             border: 1px solid #bbdefb;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .categoria-badge:hover {
+            background: #1565c0;
+            color: white;
+        }
+
+        .campo-com-botao {
+            display: flex;
+            gap: 6px;
+        }
+
+        .campo-com-botao select {
+            flex: 1;
+        }
+
+        .botao-inline {
+            padding: 9px 12px;
+            background: #222;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .botao-inline:hover {
+            background: #d71920;
+        }
+
+        /* MODAL DE CATEGORIA */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            width: 90%;
+            max-width: 440px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+            animation: modalEntrada 0.2s ease-out;
+        }
+
+        @keyframes modalEntrada {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* RESUMO POR CATEGORIA (CHIPS) */
+        .resumo-categorias-container {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+        }
+
+        .resumo-titulo {
+            font-size: 13px;
+            font-weight: bold;
+            color: #222;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .resumo-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip-categoria {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            text-decoration: none;
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+            transition: all 0.2s;
+        }
+
+        .chip-categoria:hover {
+            background: #ffebee;
+            border-color: #d71920;
+            color: #d71920;
+        }
+
+        .chip-categoria.chip-ativo {
+            background: #d71920;
+            color: white;
+            border-color: #d71920;
+            font-weight: bold;
+        }
+
+        .chip-categoria.chip-ativo .chip-qtd {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+        }
+
+        .chip-qtd {
+            font-size: 11px;
+            background: #e0e0e0;
+            padding: 2px 6px;
+            border-radius: 10px;
+            color: #555;
         }
 
         .valor-saida {
@@ -357,18 +487,17 @@
 
                 <div class="campo">
                     <label for="categoria">Categoria <span class="obrigatorio">*</span></label>
-                    <select id="categoria" name="categoria" required>
-                        <option value="Aluguel">Aluguel</option>
-                        <option value="Energia Elétrica">Energia Elétrica</option>
-                        <option value="Água e Esgoto">Água e Esgoto</option>
-                        <option value="Impostos">Impostos / DAS</option>
-                        <option value="Pró-labore">Pró-labore / Retiradas</option>
-                        <option value="Peças Avulsas">Peças / Insumos Avulsos</option>
-                        <option value="Ferramentas">Ferramentas / Equipamentos</option>
-                        <option value="Internet e Telefone">Internet e Telefone</option>
-                        <option value="Manutenção">Manutenção e Limpeza</option>
-                        <option value="Outros" selected>Outros</option>
-                    </select>
+                    <div class="campo-com-botao">
+                        <select id="categoria" name="categoria" required>
+                            {% for cat in categorias %}
+                                <option value="{{ cat }}" {% if cat == 'Outros' %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                            <option value="__nova__">+ Cadastrar Nova Categoria...</option>
+                        </select>
+                        <button type="button" class="botao-inline" onclick="abrirModalNovaCategoria()" title="Cadastrar nova categoria de saída">
+                            <i class="fa-solid fa-plus"></i> Nova
+                        </button>
+                    </div>
                 </div>
 
                 <div class="campo">
@@ -402,7 +531,7 @@
         </form>
     </div>
 
-    <!-- FILTRO DE PERÍODO -->
+    <!-- FILTRO DE PERÍODO E CATEGORIA -->
     <form method="GET" action="/despesas" class="filtro-container">
         <div class="campo">
             <label for="data_inicio">Data Inicial</label>
@@ -414,20 +543,68 @@
             <input type="date" id="data_fim" name="data_fim" value="{{ data_fim }}">
         </div>
 
-        <button type="submit" class="botao" style="padding: 9px 16px;">
-            <i class="fa-solid fa-filter"></i> Filtrar
-        </button>
+        <div class="campo">
+            <label for="categoria_filtro">Filtrar por Categoria</label>
+            <select id="categoria_filtro" name="categoria_filtro">
+                <option value="">Todas as Categorias</option>
+                {% for cat in categorias %}
+                    <option value="{{ cat }}" {% if categoria_filtro == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-        <a href="/despesas" class="botao botao-secundario" style="padding: 9px 16px;">
-            Limpar Filtro
-        </a>
+        <div class="campo" style="flex: 1; min-width: 180px;">
+            <label for="busca">Buscar Descrição / Observação</label>
+            <input type="text" id="busca" name="busca" value="{{ busca }}" placeholder="Ex: nome do banco, favorecido...">
+        </div>
+
+        <div style="display: flex; gap: 8px; align-self: flex-end;">
+            <button type="submit" class="botao" style="padding: 9px 16px;">
+                <i class="fa-solid fa-filter"></i> Filtrar
+            </button>
+
+            <a href="/despesas" class="botao botao-secundario" style="padding: 9px 16px;" title="Limpar todos os filtros">
+                Limpar
+            </a>
+        </div>
     </form>
+
+    <!-- RESUMO POR CATEGORIA (TOTALIZADORES INDIVIDUAIS) -->
+    {% if resumo_categorias %}
+        <div class="resumo-categorias-container">
+            <div class="resumo-titulo">
+                <i class="fa-solid fa-chart-pie" style="color: #d71920;"></i> Saídas por Categoria no Período:
+                <span style="font-weight: normal; font-size: 12px; color: #777;">(clique para filtrar uma por uma)</span>
+            </div>
+            <div class="resumo-chips">
+                <a href="/despesas?{% if data_inicio %}data_inicio={{ data_inicio }}&{% endif %}{% if data_fim %}data_fim={{ data_fim }}&{% endif %}{% if busca %}busca={{ busca }}{% endif %}"
+                   class="chip-categoria {% if not categoria_filtro %}chip-ativo{% endif %}"
+                   title="Ver todas as categorias">
+                    <strong>Todas</strong>: R$ {{ "{:,.2f}".format(total_despesas).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                </a>
+                {% for item in resumo_categorias %}
+                    <a href="/despesas?categoria_filtro={{ item[0] }}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}{% if busca %}&busca={{ busca }}{% endif %}"
+                       class="chip-categoria {% if categoria_filtro == item[0] %}chip-ativo{% endif %}"
+                       title="Filtrar apenas {{ item[0] }}">
+                        <strong>{{ item[0] }}</strong>: R$ {{ "{:,.2f}".format(item[2]).replace(",", "X").replace(".", ",").replace("X", ".") }}
+                        <span class="chip-qtd">({{ item[1] }})</span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
 
     <!-- TOTALIZADOR -->
     <div class="card-total">
         <i class="fa-solid fa-arrow-trend-down" style="font-size: 28px; color: #c62828;"></i>
         <div>
-            <div class="card-total-titulo">Total de Saídas no Período</div>
+            <div class="card-total-titulo">
+                {% if categoria_filtro %}
+                    Total de Saídas ({{ categoria_filtro }}) no Período
+                {% else %}
+                    Total de Saídas no Período
+                {% endif %}
+            </div>
             <div class="card-total-valor">
                 R$ {{ "{:,.2f}".format(total_despesas).replace(",", "X").replace(".", ",").replace("X", ".") }}
             </div>
@@ -460,7 +637,12 @@
                                 {% endif %}
                             </td>
                             <td><strong>{{ d[2] }}</strong></td>
-                            <td><span class="categoria-badge">{{ d[3] }}</span></td>
+                            <td>
+                                <a href="/despesas?categoria_filtro={{ d[3] }}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}{% if busca %}&busca={{ busca }}{% endif %}"
+                                   class="categoria-badge" title="Filtrar somente {{ d[3] }}">
+                                    {{ d[3] }}
+                                </a>
+                            </td>
                             <td>{{ d[5] or "-" }}</td>
                             <td class="valor-saida">
                                 R$ {{ "{:,.2f}".format(d[4]).replace(",", "X").replace(".", ",").replace("X", ".") }}
@@ -486,6 +668,137 @@
     {% endif %}
 
 </div>
+
+<!-- MODAL PARA CADASTRAR NOVA CATEGORIA -->
+<div id="modalNovaCategoria" class="modal-overlay">
+    <div class="modal-card">
+        <h3 style="margin: 0 0 10px 0; color: #222; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-folder-plus" style="color: #d71920;"></i> Nova Categoria de Despesa
+        </h3>
+        <p style="font-size: 13px; color: #666; margin: 0 0 15px 0;">
+            Cadastre um novo tipo de saída (ex: <em>Empréstimo Santander</em>, <em>Combustível</em>, <em>Marketing</em>). Ela ficará salva permanentemente no sistema.
+        </p>
+
+        <div class="campo" style="margin-bottom: 15px;">
+            <label for="nome_nova_categoria">Nome da Categoria <span class="obrigatorio">*</span></label>
+            <input type="text" id="nome_nova_categoria" placeholder="Digite o nome da nova categoria..." style="width: 100%; box-sizing: border-box;">
+            <div id="erroModalCategoria" style="color: #d71920; font-size: 12px; margin-top: 5px; display: none;"></div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" class="botao botao-secundario" onclick="fecharModalNovaCategoria()">
+                Cancelar
+            </button>
+            <button type="button" class="botao" id="btnSalvarNovaCategoria" onclick="salvarNovaCategoria()">
+                <i class="fa-solid fa-check"></i> Salvar Categoria
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalNovaCategoria() {
+    document.getElementById("nome_nova_categoria").value = "";
+    document.getElementById("erroModalCategoria").style.display = "none";
+    document.getElementById("modalNovaCategoria").style.display = "flex";
+    setTimeout(function() {
+        document.getElementById("nome_nova_categoria").focus();
+    }, 100);
+}
+
+function fecharModalNovaCategoria() {
+    document.getElementById("modalNovaCategoria").style.display = "none";
+    const selectCat = document.getElementById("categoria");
+    if (selectCat && selectCat.value === "__nova__") {
+        selectCat.value = selectCat.options[0] ? selectCat.options[0].value : "Outros";
+    }
+}
+
+document.getElementById("categoria").addEventListener("change", function() {
+    if (this.value === "__nova__") {
+        abrirModalNovaCategoria();
+    }
+});
+
+document.getElementById("nome_nova_categoria").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        salvarNovaCategoria();
+    } else if (e.key === "Escape") {
+        fecharModalNovaCategoria();
+    }
+});
+
+// Fechar ao clicar fora do card
+document.getElementById("modalNovaCategoria").addEventListener("click", function(e) {
+    if (e.target === this) {
+        fecharModalNovaCategoria();
+    }
+});
+
+async function salvarNovaCategoria() {
+    const nomeInput = document.getElementById("nome_nova_categoria");
+    const erroDiv = document.getElementById("erroModalCategoria");
+    const btnSalvar = document.getElementById("btnSalvarNovaCategoria");
+    const nome = nomeInput.value.trim();
+
+    if (!nome) {
+        erroDiv.innerText = "Por favor, digite o nome da categoria.";
+        erroDiv.style.display = "block";
+        nomeInput.focus();
+        return;
+    }
+
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+
+    try {
+        const response = await fetch("/api/categorias-despesas", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nome: nome })
+        });
+
+        const data = await response.json();
+
+        if (data.sucesso) {
+            const selectForm = document.getElementById("categoria");
+            const selectFiltro = document.getElementById("categoria_filtro");
+
+            let jaExiste = false;
+            for (let i = 0; i < selectForm.options.length; i++) {
+                if (selectForm.options[i].value.toLowerCase() === data.nome.toLowerCase()) {
+                    selectForm.options[i].selected = true;
+                    jaExiste = true;
+                    break;
+                }
+            }
+
+            if (!jaExiste) {
+                // Inserir antes da última opção (__nova__)
+                const novaOpt = new Option(data.nome, data.nome, true, true);
+                selectForm.add(novaOpt, selectForm.options.length - 1);
+                selectForm.value = data.nome;
+
+                if (selectFiltro) {
+                    selectFiltro.add(new Option(data.nome, data.nome));
+                }
+            }
+
+            fecharModalNovaCategoria();
+        } else {
+            erroDiv.innerText = data.erro || "Erro ao salvar categoria.";
+            erroDiv.style.display = "block";
+        }
+    } catch (err) {
+        erroDiv.innerText = "Erro de conexão ao salvar categoria.";
+        erroDiv.style.display = "block";
+    } finally {
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = '<i class="fa-solid fa-check"></i> Salvar Categoria';
+    }
+}
+</script>
 
 </body>
 </html>

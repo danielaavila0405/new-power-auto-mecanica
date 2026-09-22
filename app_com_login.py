@@ -226,6 +226,39 @@ def garantir_tabelas_sistema():
         )
     """)
 
+    # Categorias de Despesas / Saídas
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS categorias_despesas (
+            id_categoria INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT UNIQUE NOT NULL,
+            ativo INTEGER DEFAULT 1
+        )
+    """)
+
+    categorias_padrao = [
+        "Empréstimo",
+        "Pró-labore",
+        "Aluguel",
+        "Energia Elétrica",
+        "Água e Esgoto",
+        "Impostos",
+        "Peças Avulsas",
+        "Ferramentas",
+        "Internet e Telefone",
+        "Manutenção",
+        "Outros"
+    ]
+    for cat in categorias_padrao:
+        cursor.execute("INSERT OR IGNORE INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (cat,))
+
+    # Sincronizar categorias já existentes na tabela despesas
+    cursor.execute("SELECT DISTINCT categoria FROM despesas WHERE categoria IS NOT NULL AND TRIM(categoria) != ''")
+    for linha in cursor.fetchall():
+        cat_existente = linha[0].strip()
+        if cat_existente:
+            cursor.execute("INSERT OR IGNORE INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (cat_existente,))
+
+
     # Migrações graduais de colunas para bancos existentes
     cursor.execute("PRAGMA table_info(usuarios)")
     colunas_usr = [linha[1] for linha in cursor.fetchall()]
@@ -701,6 +734,45 @@ def api_pecas():
 
 
 # ============================================================
+# API DE CATEGORIAS DE DESPESAS
+# ============================================================
+
+@app.route("/api/categorias-despesas", methods=["GET", "POST"])
+def api_categorias_despesas():
+    conexao = conectar_banco()
+    cursor = conexao.cursor()
+
+    if request.method == "POST":
+        dados = request.get_json(silent=True) or {}
+        nome = (dados.get("nome") or request.form.get("nome", "")).strip()
+
+        if not nome:
+            conexao.close()
+            return jsonify({"sucesso": False, "erro": "O nome da categoria não pode estar em branco."}), 400
+
+        try:
+            cursor.execute("INSERT INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (nome,))
+            conexao.commit()
+            id_cat = cursor.lastrowid
+            conexao.close()
+            return jsonify({"sucesso": True, "id": id_cat, "nome": nome, "mensagem": "Categoria criada com sucesso!"})
+        except sqlite3.IntegrityError:
+            # Reativa caso estivesse desativada
+            cursor.execute("UPDATE categorias_despesas SET ativo = 1 WHERE LOWER(nome) = LOWER(?)", (nome,))
+            conexao.commit()
+            conexao.close()
+            return jsonify({"sucesso": True, "nome": nome, "mensagem": "Categoria já existe e está ativa!"})
+        except Exception as e:
+            conexao.close()
+            return jsonify({"sucesso": False, "erro": str(e)}), 500
+
+    cursor.execute("SELECT id_categoria, nome FROM categorias_despesas WHERE ativo = 1 ORDER BY nome COLLATE NOCASE ASC")
+    categorias = [{"id": r[0], "nome": r[1]} for r in cursor.fetchall()]
+    conexao.close()
+    return jsonify(categorias)
+
+
+# ============================================================
 # SAÍDAS E DESPESAS DA OFICINA
 # ============================================================
 
@@ -712,7 +784,13 @@ def gerenciar_despesas():
     if request.method == "POST":
         data = request.form.get("data", "").strip() or datetime.now().strftime("%Y-%m-%d")
         descricao = request.form.get("descricao", "").strip()
-        categoria = request.form.get("categoria", "Outros").strip()
+        categoria = request.form.get("categoria", "").strip()
+        nova_categoria = request.form.get("nova_categoria", "").strip()
+        if nova_categoria:
+            categoria = nova_categoria
+        if not categoria:
+            categoria = "Outros"
+
         valor = converter_para_float(request.form.get("valor", 0))
         forma_pagamento = request.form.get("forma_pagamento", "PIX").strip()
         observacoes = request.form.get("observacoes", "").strip()
@@ -724,6 +802,8 @@ def gerenciar_despesas():
         else:
             conexao = conectar_banco()
             cursor = conexao.cursor()
+            # Garante que a categoria está salva no catálogo de categorias
+            cursor.execute("INSERT OR IGNORE INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (categoria,))
             cursor.execute("""
                 INSERT INTO despesas (data, descricao, categoria, valor, forma_pagamento, status, observacoes)
                 VALUES (?, ?, ?, ?, ?, 'Pago', ?)
@@ -734,35 +814,81 @@ def gerenciar_despesas():
 
     data_inicio = request.args.get("data_inicio", "").strip()
     data_fim = request.args.get("data_fim", "").strip()
+    categoria_filtro = request.args.get("categoria_filtro", "").strip()
+    busca = request.args.get("busca", "").strip()
 
     conexao = conectar_banco()
     cursor = conexao.cursor()
 
-    if not data_inicio and not data_fim:
-        filtro_data = ""
-        parametros = ()
-    else:
-        if not data_inicio:
-            data_inicio = data_fim
-        if not data_fim:
-            data_fim = data_inicio
-        filtro_data = "WHERE date(data) BETWEEN date(?) AND date(?)"
-        parametros = (data_inicio, data_fim)
+    # Buscar todas as categorias ativas
+    cursor.execute("SELECT nome FROM categorias_despesas WHERE ativo = 1 ORDER BY nome COLLATE NOCASE ASC")
+    categorias_lista = [r[0] for r in cursor.fetchall()]
+
+    # Montar filtros dinâmicos
+    condicoes = []
+    parametros = []
+
+    if data_inicio and data_fim:
+        condicoes.append("date(data) BETWEEN date(?) AND date(?)")
+        parametros.extend([data_inicio, data_fim])
+    elif data_inicio:
+        condicoes.append("date(data) >= date(?)")
+        parametros.append(data_inicio)
+    elif data_fim:
+        condicoes.append("date(data) <= date(?)")
+        parametros.append(data_fim)
+
+    if categoria_filtro:
+        condicoes.append("categoria = ?")
+        parametros.append(categoria_filtro)
+
+    if busca:
+        condicoes.append("(descricao LIKE ? OR observacoes LIKE ?)")
+        parametros.extend([f"%{busca}%", f"%{busca}%"])
+
+    filtro_sql = ("WHERE " + " AND ".join(condicoes)) if condicoes else ""
 
     cursor.execute(f"""
         SELECT id_despesa, data, descricao, categoria, valor, forma_pagamento, status, observacoes
         FROM despesas
-        {filtro_data}
+        {filtro_sql}
         ORDER BY date(data) DESC, id_despesa DESC
-    """, parametros)
+    """, tuple(parametros))
     lista_despesas = cursor.fetchall()
 
     cursor.execute(f"""
         SELECT COALESCE(SUM(valor), 0)
         FROM despesas
-        {filtro_data}
-    """, parametros)
+        {filtro_sql}
+    """, tuple(parametros))
     total_despesas = cursor.fetchone()[0]
+
+    # Resumo agregado por categoria no período consultado (independente do filtro de categoria atual, para mostrar os chips)
+    condicoes_resumo = []
+    params_resumo = []
+    if data_inicio and data_fim:
+        condicoes_resumo.append("date(data) BETWEEN date(?) AND date(?)")
+        params_resumo.extend([data_inicio, data_fim])
+    elif data_inicio:
+        condicoes_resumo.append("date(data) >= date(?)")
+        params_resumo.append(data_inicio)
+    elif data_fim:
+        condicoes_resumo.append("date(data) <= date(?)")
+        params_resumo.append(data_fim)
+    if busca:
+        condicoes_resumo.append("(descricao LIKE ? OR observacoes LIKE ?)")
+        params_resumo.extend([f"%{busca}%", f"%{busca}%"])
+
+    filtro_resumo_sql = ("WHERE " + " AND ".join(condicoes_resumo)) if condicoes_resumo else ""
+
+    cursor.execute(f"""
+        SELECT categoria, COUNT(*), COALESCE(SUM(valor), 0)
+        FROM despesas
+        {filtro_resumo_sql}
+        GROUP BY categoria
+        ORDER BY SUM(valor) DESC
+    """, tuple(params_resumo))
+    resumo_categorias = cursor.fetchall()
 
     conexao.close()
 
@@ -770,6 +896,10 @@ def gerenciar_despesas():
         "despesas.html",
         despesas=lista_despesas,
         total_despesas=total_despesas,
+        categorias=categorias_lista,
+        categoria_filtro=categoria_filtro,
+        busca=busca,
+        resumo_categorias=resumo_categorias,
         data_inicio=data_inicio,
         data_fim=data_fim,
         data_atual=datetime.now().strftime("%Y-%m-%d"),

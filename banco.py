@@ -191,6 +191,42 @@ CREATE TABLE IF NOT EXISTS despesas (
 """)
 
 # ==================================================
+# TABELA DE CATEGORIAS DE DESPESAS
+# ==================================================
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS categorias_despesas (
+    id_categoria INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT UNIQUE NOT NULL,
+    ativo INTEGER DEFAULT 1
+)
+""")
+
+categorias_padrao = [
+    "Empréstimo",
+    "Pró-labore",
+    "Aluguel",
+    "Energia Elétrica",
+    "Água e Esgoto",
+    "Impostos",
+    "Peças Avulsas",
+    "Ferramentas",
+    "Internet e Telefone",
+    "Manutenção",
+    "Outros"
+]
+for cat in categorias_padrao:
+    cursor.execute("INSERT OR IGNORE INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (cat,))
+
+# Sincronizar categorias já existentes na tabela despesas
+cursor.execute("SELECT DISTINCT categoria FROM despesas WHERE categoria IS NOT NULL AND TRIM(categoria) != ''")
+for linha in cursor.fetchall():
+    cat_existente = linha[0].strip()
+    if cat_existente:
+        cursor.execute("INSERT OR IGNORE INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (cat_existente,))
+
+
+# ==================================================
 # TABELA DE USUÁRIOS
 # ==================================================
 
