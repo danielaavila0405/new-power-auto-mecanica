@@ -8,7 +8,8 @@ from flask import (
     send_from_directory,
     session,
     g,
-    Response
+    Response,
+    url_for
 )
 import sqlite3
 import os
@@ -1162,9 +1163,27 @@ def api_categorias_despesas():
 # ============================================================
 
 @app.route("/despesas", methods=["GET", "POST"])
-def gerenciar_despesas():
+@app.route("/despesas/<int:id_despesa>/editar", methods=["GET", "POST"])
+def gerenciar_despesas(id_despesa=None):
     mensagem = request.args.get("mensagem", "")
     sucesso = request.args.get("sucesso", "")
+
+    filtros = {chave: request.args[chave] for chave in
+               ("data_inicio", "data_fim", "categoria_filtro", "busca") if chave in request.args}
+    url_despesas = url_for("gerenciar_despesas", **filtros)
+    formulario = None
+
+    if id_despesa is not None:
+        conexao = conectar_banco()
+        despesa = conexao.execute("""
+            SELECT data, descricao, categoria, valor, forma_pagamento, observacoes
+            FROM despesas WHERE id_despesa = ?
+        """, (id_despesa,)).fetchone()
+        conexao.close()
+        if despesa is None:
+            return redirect(url_for("gerenciar_despesas", mensagem="Despesa não encontrada.", **filtros))
+        formulario = dict(zip(("data", "descricao", "categoria", "valor", "forma_pagamento", "observacoes"), despesa))
+        formulario["data"] = formulario["data"][:10]
 
     if request.method == "POST":
         data = request.form.get("data", "").strip() or datetime.now().strftime("%Y-%m-%d")
@@ -1180,6 +1199,9 @@ def gerenciar_despesas():
         forma_pagamento = request.form.get("forma_pagamento", "PIX").strip()
         observacoes = request.form.get("observacoes", "").strip()
 
+        formulario = dict(data=data, descricao=descricao, categoria=categoria,
+                          valor=request.form.get("valor", ""), forma_pagamento=forma_pagamento,
+                          observacoes=observacoes)
         if not descricao:
             mensagem = "A descrição da despesa é obrigatória."
         elif valor <= 0:
@@ -1189,13 +1211,26 @@ def gerenciar_despesas():
             cursor = conexao.cursor()
             # Garante que a categoria está salva no catálogo de categorias
             cursor.execute("INSERT OR IGNORE INTO categorias_despesas (nome, ativo) VALUES (?, 1)", (categoria,))
-            cursor.execute("""
-                INSERT INTO despesas (data, descricao, categoria, valor, forma_pagamento, status, observacoes)
-                VALUES (?, ?, ?, ?, ?, 'Pago', ?)
-            """, (data, descricao, categoria, valor, forma_pagamento, observacoes))
+            valores = (data, descricao, categoria, valor, forma_pagamento, observacoes)
+            if id_despesa is None:
+                cursor.execute("""
+                    INSERT INTO despesas (data, descricao, categoria, valor, forma_pagamento, observacoes, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'Pago')
+                """, valores)
+                sucesso = "Saída registrada com sucesso!"
+            else:
+                cursor.execute("""
+                    UPDATE despesas
+                    SET data = ?, descricao = ?, categoria = ?, valor = ?, forma_pagamento = ?, observacoes = ?
+                    WHERE id_despesa = ?
+                """, (*valores, id_despesa))
+                if cursor.rowcount != 1:
+                    conexao.close()
+                    return redirect(url_for("gerenciar_despesas", mensagem="Despesa não encontrada.", **filtros))
+                sucesso = "Saída atualizada com sucesso!"
             conexao.commit()
             conexao.close()
-            return redirect("/despesas?sucesso=Saída+registrada+com+sucesso!")
+            return redirect(url_for("gerenciar_despesas", sucesso=sucesso, **filtros))
 
     data_inicio = request.args.get("data_inicio", "").strip()
     data_fim = request.args.get("data_fim", "").strip()
@@ -1279,6 +1314,10 @@ def gerenciar_despesas():
 
     return render_template(
         "despesas.html",
+        id_despesa=id_despesa,
+        formulario=formulario,
+        url_despesas=url_despesas,
+        filtros=filtros,
         despesas=lista_despesas,
         total_despesas=total_despesas,
         categorias=categorias_lista,
@@ -2115,6 +2154,41 @@ def nova_os():
 # LISTA E PESQUISA DE ORDENS DE SERVIÇO
 # ============================================================
 
+STATUS_OS = ("Aberta", "Em andamento", "Finalizada", "Cancelada")
+
+
+@app.route("/ordens/status", methods=["POST"])
+def atualizar_status_em_massa():
+    status = request.form.get("novo_status")
+    selecionadas = set(request.form.getlist("ids_os"))
+    filtros = {chave: valor for chave, valor in request.args.items() if chave not in ("mensagem", "sucesso")}
+
+    if status not in STATUS_OS or not selecionadas:
+        return redirect(url_for("ordens", mensagem="Selecione as OS e um status válido.", **filtros))
+
+    try:
+        ids = {int(item) for item in selecionadas}
+        if any(item <= 0 or item > 2**63 - 1 for item in ids):
+            raise ValueError
+    except ValueError:
+        return redirect(url_for("ordens", mensagem="Seleção de OS inválida.", **filtros))
+
+    conexao = conectar_banco()
+    try:
+        cursor = conexao.executemany(
+            "UPDATE ordens_servico SET status = ? WHERE id_os = ?",
+            [(status, id_os) for id_os in ids]
+        )
+        if cursor.rowcount != len(ids):
+            conexao.rollback()
+            return redirect(url_for("ordens", mensagem="Uma ou mais OS não existem mais. Selecione novamente.", **filtros))
+        conexao.commit()
+    finally:
+        conexao.close()
+
+    return redirect(url_for("ordens", sucesso=f"Status atualizado em {len(ids)} OS.", **filtros))
+
+
 @app.route("/ordens")
 def ordens():
 
@@ -2287,6 +2361,7 @@ def ordens():
 
     return render_template(
         "ordens.html",
+        status_disponiveis=STATUS_OS,
         ordens=lista_os,
         numero_os=numero_os,
         cliente=cliente,

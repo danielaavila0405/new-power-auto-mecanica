@@ -468,29 +468,33 @@
 
     <!-- FORMULÁRIO DE LANÇAMENTO -->
     <div class="card-formulario">
-        <h3><i class="fa-solid fa-circle-plus" style="color: #d71920;"></i> Lançar Nova Saída</h3>
+        <h3><i class="fa-solid fa-circle-plus" style="color: #d71920;"></i> {{ 'Editar Saída' if id_despesa else 'Lançar Nova Saída' }}</h3>
         <p style="font-size: 13px; color: #666; margin: 0 0 15px 0;">
             Cadastre as contas e despesas da oficina (aluguel, água, energia, impostos, pró-labore, ferramentas etc.) para apurar o <strong>Lucro Líquido Real</strong>.
         </p>
 
-        <form method="POST" action="/despesas">
+        <form method="POST" action="{{ url_for('gerenciar_despesas', id_despesa=id_despesa, **filtros) }}">
             <div class="grid-campos">
                 <div class="campo">
                     <label for="data">Data de Pagamento <span class="obrigatorio">*</span></label>
-                    <input type="date" id="data" name="data" value="{{ data_atual }}" required>
+                    <input type="date" id="data" name="data" value="{{ formulario.data if formulario else data_atual }}" required>
                 </div>
 
                 <div class="campo" style="grid-column: span 2;">
                     <label for="descricao">Descrição da Despesa <span class="obrigatorio">*</span></label>
-                    <input type="text" id="descricao" name="descricao" required placeholder="Ex: Aluguel da oficina, Conta Enel, DAS Simples, Pró-labore...">
+                    <input type="text" id="descricao" name="descricao" value="{{ formulario.descricao if formulario else '' }}" required placeholder="Ex: Aluguel da oficina, Conta Enel, DAS Simples, Pró-labore...">
                 </div>
 
                 <div class="campo">
                     <label for="categoria">Categoria <span class="obrigatorio">*</span></label>
                     <div class="campo-com-botao">
                         <select id="categoria" name="categoria" required>
+                            {% set categoria_atual = formulario.categoria if formulario else 'Outros' %}
+                            {% if categoria_atual and categoria_atual not in categorias %}
+                                <option value="{{ categoria_atual }}" selected>{{ categoria_atual }}</option>
+                            {% endif %}
                             {% for cat in categorias %}
-                                <option value="{{ cat }}" {% if cat == 'Outros' %}selected{% endif %}>{{ cat }}</option>
+                                <option value="{{ cat }}" {% if cat == categoria_atual %}selected{% endif %}>{{ cat }}</option>
                             {% endfor %}
                             <option value="__nova__">+ Cadastrar Nova Categoria...</option>
                         </select>
@@ -502,30 +506,35 @@
 
                 <div class="campo">
                     <label for="valor">Valor da Saída (R$) <span class="obrigatorio">*</span></label>
-                    <input type="number" step="0.01" min="0.01" id="valor" name="valor" required placeholder="0,00">
+                    <input type="number" step="0.01" min="0.01" id="valor" name="valor" value="{{ formulario.valor if formulario else '' }}" required placeholder="0,00">
                 </div>
 
                 <div class="campo">
                     <label for="forma_pagamento">Forma de Pagamento</label>
                     <select id="forma_pagamento" name="forma_pagamento">
-                        <option value="PIX">PIX</option>
-                        <option value="Boleto">Boleto Bancário</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                        <option value="Cartão de Débito">Cartão de Débito</option>
-                        <option value="Dinheiro">Dinheiro</option>
-                        <option value="Transferência">Transferência</option>
+                        {% set formas = {'PIX': 'PIX', 'Boleto': 'Boleto Bancário', 'Cartão de Crédito': 'Cartão de Crédito', 'Cartão de Débito': 'Cartão de Débito', 'Dinheiro': 'Dinheiro', 'Transferência': 'Transferência'} %}
+                        {% set forma_atual = (formulario.forma_pagamento or '') if formulario else 'PIX' %}
+                        {% if forma_atual not in formas %}
+                            <option value="{{ forma_atual }}" selected>{{ forma_atual or 'Não informada' }}</option>
+                        {% endif %}
+                        {% for valor, rotulo in formas.items() %}
+                            <option value="{{ valor }}" {% if valor == forma_atual %}selected{% endif %}>{{ rotulo }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
                 <div class="campo" style="grid-column: span 2;">
                     <label for="observacoes">Observações (opcional)</label>
-                    <input type="text" id="observacoes" name="observacoes" placeholder="Ex: Referente ao mês de Setembro">
+                    <input type="text" id="observacoes" name="observacoes" value="{{ (formulario.observacoes or '') if formulario else '' }}" placeholder="Ex: Referente ao mês de Setembro">
                 </div>
             </div>
 
             <div class="botoes-form">
+                {% if id_despesa %}
+                    <a class="botao botao-secundario" href="{{ url_despesas }}">Cancelar edição</a>
+                {% endif %}
                 <button type="submit" class="botao">
-                    <i class="fa-solid fa-floppy-disk"></i> REGISTRAR SAÍDA
+                    <i class="fa-solid fa-floppy-disk"></i> {{ 'SALVAR ALTERAÇÕES' if id_despesa else 'REGISTRAR SAÍDA' }}
                 </button>
             </div>
         </form>
@@ -649,6 +658,9 @@
                             </td>
                             <td style="color: #666; font-size: 13px;">{{ d[7] or "-" }}</td>
                             <td style="text-align: center;">
+                                <a class="botao-acao botao-secundario" href="{{ url_for('gerenciar_despesas', id_despesa=d[0], **filtros) }}" aria-label="Editar saída {{ d[2] }}">
+                                    <i class="fa-solid fa-pen"></i> Editar
+                                </a>
                                 <form method="POST" action="/despesas/{{ d[0] }}/excluir" style="display:inline;" onsubmit="return confirm('Deseja realmente excluir esta despesa: {{ d[2] }}?');">
                                     <button type="submit" class="botao-acao botao-excluir" title="Excluir saída">
                                         <i class="fa-solid fa-trash"></i> Excluir

@@ -766,6 +766,13 @@
     </div>
 
 
+    {% if request.args.get('mensagem') %}
+        <p role="alert">{{ request.args.get('mensagem') }}</p>
+    {% endif %}
+    {% if request.args.get('sucesso') %}
+        <p role="status">{{ request.args.get('sucesso') }}</p>
+    {% endif %}
+
     <!-- RESULTADO -->
 
     <div class="resultado-pesquisa">
@@ -784,6 +791,17 @@
     ===================================================== -->
 
     {% if ordens %}
+    <form id="status-em-massa" method="post" action="{{ url_for('atualizar_status_em_massa', **request.args) }}" style="margin-bottom: 12px;">
+        <label for="novo-status">Novo status das OS selecionadas</label>
+        <select id="novo-status" name="novo_status" required>
+            <option value="">Selecione um status</option>
+            {% for opcao in status_disponiveis %}
+                <option value="{{ opcao }}">{{ opcao }}</option>
+            {% endfor %}
+        </select>
+        <button class="botao" type="submit" disabled>Aplicar às selecionadas</button>
+        <span id="contagem-selecao" aria-live="polite">0 selecionadas</span>
+    </form>
 
 
     <div class="tabela-container">
@@ -796,6 +814,9 @@
 
                 <tr>
 
+                    <th>
+                        <input type="checkbox" id="selecionar-todas-os" aria-label="Selecionar todas as OS exibidas">
+                    </th>
                     <th>
                         OS
                     </th>
@@ -846,6 +867,9 @@
                 <tr>
 
 
+                    <td>
+                        <input type="checkbox" name="ids_os" value="{{ os[0] }}" form="status-em-massa" aria-label="Selecionar OS {{ os[0] }}">
+                    </td>
                     <td>
                         <strong>
                             Nº {{ os[0] }}
@@ -1008,6 +1032,32 @@
 </div>
 
 
+<script>
+    const formularioStatus = document.getElementById('status-em-massa');
+    if (formularioStatus) {
+        const todas = document.getElementById('selecionar-todas-os');
+        const caixas = [...document.querySelectorAll('[name="ids_os"][form="status-em-massa"]')];
+        const novoStatus = document.getElementById('novo-status');
+        const aplicar = formularioStatus.querySelector('button');
+        const contagem = document.getElementById('contagem-selecao');
+
+        function atualizarSelecao() {
+            const quantidade = caixas.filter(caixa => caixa.checked).length;
+            todas.checked = quantidade === caixas.length;
+            todas.indeterminate = quantidade > 0 && quantidade < caixas.length;
+            aplicar.disabled = quantidade === 0 || !novoStatus.value;
+            contagem.textContent = quantidade + ' selecionadas';
+        }
+
+        todas.addEventListener('change', () => {
+            caixas.forEach(caixa => { caixa.checked = todas.checked; });
+            atualizarSelecao();
+        });
+        caixas.forEach(caixa => caixa.addEventListener('change', atualizarSelecao));
+        novoStatus.addEventListener('change', atualizarSelecao);
+        atualizarSelecao();
+    }
+</script>
 </body>
 
 </html>
