@@ -378,12 +378,22 @@
             font-weight: bold;
         }
 
+        .acoes-despesa {
+            display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .acoes-despesa form { margin: 0; }
+
         .botao-acao {
             padding: 6px 10px;
             border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            border: none;
+            font: bold 12px Arial, sans-serif;
+            border: 1px solid #d71920;
+            background-color: #fff;
+            color: #d71920;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -391,12 +401,7 @@
             text-decoration: none;
         }
 
-        .botao-excluir {
-            background-color: #d71920;
-            color: white;
-        }
-
-        .botao-excluir:hover { background-color: #b51218; }
+        .botao-acao:hover { background-color: #fff2f2; }
 
         .vazio {
             padding: 25px;
@@ -658,14 +663,16 @@
                             </td>
                             <td style="color: #666; font-size: 13px;">{{ d[7] or "-" }}</td>
                             <td style="text-align: center;">
-                                <a class="botao-acao botao-secundario" href="{{ url_for('gerenciar_despesas', id_despesa=d[0], **filtros) }}" aria-label="Editar saída {{ d[2] }}">
-                                    <i class="fa-solid fa-pen"></i> Editar
-                                </a>
-                                <form method="POST" action="/despesas/{{ d[0] }}/excluir" style="display:inline;" onsubmit="return confirm('Deseja realmente excluir esta despesa: {{ d[2] }}?');">
-                                    <button type="submit" class="botao-acao botao-excluir" title="Excluir saída">
-                                        <i class="fa-solid fa-trash"></i> Excluir
-                                    </button>
-                                </form>
+                                <div class="acoes-despesa">
+                                    <a class="botao-acao" href="{{ url_for('gerenciar_despesas', id_despesa=d[0], **filtros) }}" aria-label="Editar saída {{ d[2] }}">
+                                        <i class="fa-solid fa-pen"></i> Editar
+                                    </a>
+                                    <form method="POST" action="/despesas/{{ d[0] }}/excluir" onsubmit="return confirm('Deseja realmente excluir esta despesa: {{ d[2] }}?');">
+                                        <button type="submit" class="botao-acao" title="Excluir saída">
+                                            <i class="fa-solid fa-trash"></i> Excluir
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}
