@@ -403,6 +403,16 @@
 
         .botao-acao:hover { background-color: #fff2f2; }
 
+        .botao-excluir {
+            background-color: #d71920;
+            color: white;
+        }
+
+        .botao-excluir:hover {
+            background-color: #b51218;
+            border-color: #b51218;
+        }
+
         .vazio {
             padding: 25px;
             text-align: center;
@@ -668,7 +678,7 @@
                                         <i class="fa-solid fa-pen"></i> Editar
                                     </a>
                                     <form method="POST" action="/despesas/{{ d[0] }}/excluir" onsubmit="return confirm('Deseja realmente excluir esta despesa: {{ d[2] }}?');">
-                                        <button type="submit" class="botao-acao" title="Excluir saída">
+                                        <button type="submit" class="botao-acao botao-excluir" title="Excluir saída">
                                             <i class="fa-solid fa-trash"></i> Excluir
                                         </button>
                                     </form>
