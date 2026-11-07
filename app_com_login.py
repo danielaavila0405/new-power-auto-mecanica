@@ -27,6 +27,8 @@ import urllib.error
 import urllib.parse
 from pathlib import Path
 from datetime import datetime, date, timedelta
+from decimal import Decimal, ROUND_HALF_UP
+from xml.sax.saxutils import escape
 from io import BytesIO
 
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -340,6 +342,9 @@ def garantir_tabelas_sistema():
     if "valor_repasse" not in colunas_servicos_os:
         cursor.execute("ALTER TABLE servicos_os ADD COLUMN valor_repasse REAL NOT NULL DEFAULT 0")
 
+    if "desconto_cartao" not in colunas_servicos_os:
+        cursor.execute("ALTER TABLE servicos_os ADD COLUMN desconto_cartao REAL NOT NULL DEFAULT 0")
+
     # Retrocompatibilidade: preencher executante e valor_repasse em serviços antigos
     try:
         cursor.execute("""
@@ -356,6 +361,7 @@ def garantir_tabelas_sistema():
             SET valor_repasse = valor * 0.5
             WHERE (valor_repasse IS NULL OR valor_repasse = 0)
               AND LOWER(executante) = 'henrique'
+              AND COALESCE(desconto_cartao, 0) = 0
         """)
     except Exception:
         pass
@@ -1867,6 +1873,32 @@ def novo_veiculo_os():
 # NOVA ORDEM DE SERVIÇO
 # ============================================================
 
+def data_servico_formulario(data_anterior=None):
+    anterior = datetime.fromisoformat(data_anterior) if data_anterior else datetime.now()
+    valor = request.form.get("data_servico", "").strip()
+    if not valor:
+        return anterior.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        dia = date.fromisoformat(valor)
+    except ValueError:
+        raise ValueError("Informe uma data válida para o serviço.")
+    return datetime.combine(dia, anterior.time()).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def calcular_repasse_cartao(repasse_bruto, pagamento, funcionario):
+    bruto = Decimal(str(repasse_bruto)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    desconto = Decimal("0.00")
+    if funcionario and "cart" in (pagamento or "").casefold():
+        desconto = (bruto * Decimal("0.06")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return float(bruto - desconto), float(desconto)
+
+
+def nomes_funcionarios(conexao):
+    return [r[0] for r in conexao.execute(
+        "SELECT nome FROM prestadores WHERE tipo = 'Funcionário' ORDER BY nome COLLATE NOCASE"
+    ).fetchall()]
+
+
 @app.route("/os", methods=["GET", "POST"])
 def nova_os():
 
@@ -1880,8 +1912,10 @@ def nova_os():
     responsavel_selecionado = ""
     pagamento_selecionado = ""
 
+    data_servico = datetime.now().strftime("%Y-%m-%d")
     conexao = conectar_banco()
     cursor = conexao.cursor()
+    funcionarios = nomes_funcionarios(conexao)
 
     if request.method == "POST":
 
@@ -1890,9 +1924,12 @@ def nova_os():
         responsavel_selecionado = request.form.get("responsavel", "")
         pagamento_selecionado = request.form.get("pagamento", "")
 
-        data = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        try:
+            data = data_servico_formulario()
+        except ValueError as erro:
+            conexao.close()
+            return str(erro), 400
+        data_servico = data[:10]
 
         pecas = request.form.getlist(
             "peca_descricao"
@@ -1995,13 +2032,18 @@ def nova_os():
                 pct = mapa_comissoes.get(executante.lower(), 50.0 if executante.lower() == "henrique" else 0.0)
                 repasse_val = valor * (pct / 100.0)
 
+            repasse_val, desconto_cartao = calcular_repasse_cartao(
+                repasse_val, pagamento_selecionado,
+                executante.casefold() in {nome.casefold() for nome in funcionarios}
+            )
             total_repasse_os += repasse_val
 
             servicos_salvos.append({
                 "descricao": servicos[i].strip(),
                 "valor": valor,
                 "executante": executante,
-                "valor_repasse": repasse_val
+                "valor_repasse": repasse_val,
+                "desconto_cartao": desconto_cartao
             })
 
         valor_total = (
@@ -2072,15 +2114,17 @@ def nova_os():
                     descricao,
                     valor,
                     executante,
-                    valor_repasse
+                    valor_repasse,
+                    desconto_cartao
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 id_os,
                 servico["descricao"],
                 servico["valor"],
                 servico.get("executante", "Henrique"),
-                servico.get("valor_repasse", 0.0)
+                servico.get("valor_repasse", 0.0),
+                servico["desconto_cartao"]
             ))
 
         conexao.commit()
@@ -2136,6 +2180,8 @@ def nova_os():
 
     return render_template(
         "os.html",
+        data_servico=data_servico,
+        funcionarios=funcionarios,
         clientes=lista_clientes,
         veiculos=lista_veiculos,
         pecas_catalogo=lista_pecas_catalogo,
@@ -3479,6 +3525,7 @@ def editar_os(id_os):
 
     conexao = conectar_banco()
     cursor = conexao.cursor()
+    funcionarios = nomes_funcionarios(conexao)
 
     cursor.execute("""
         SELECT
@@ -3502,6 +3549,11 @@ def editar_os(id_os):
         return "Ordem de Serviço não encontrada."
 
     if request.method == "POST":
+        try:
+            data = data_servico_formulario(os_dados[3])
+        except ValueError as erro:
+            conexao.close()
+            return str(erro), 400
 
         id_cliente = request.form.get(
             "cliente"
@@ -3631,13 +3683,18 @@ def editar_os(id_os):
                 pct = mapa_comissoes.get(executante.lower(), 50.0 if executante.lower() == "henrique" else 0.0)
                 repasse_val = valor * (pct / 100.0)
 
+            repasse_val, desconto_cartao = calcular_repasse_cartao(
+                repasse_val, pagamento,
+                executante.casefold() in {nome.casefold() for nome in funcionarios}
+            )
             total_repasse_os += repasse_val
 
             servicos_salvos.append({
                 "descricao": descricao,
                 "valor": valor,
                 "executante": executante,
-                "valor_repasse": repasse_val
+                "valor_repasse": repasse_val,
+                "desconto_cartao": desconto_cartao
             })
 
         valor_total = (
@@ -3660,7 +3717,8 @@ def editar_os(id_os):
                 valor_total = ?,
                 valor_repasse = ?,
                 status = ?,
-                valor_custo_pecas = ?
+                valor_custo_pecas = ?,
+                data = ?
 
             WHERE id_os = ?
         """, (
@@ -3674,6 +3732,7 @@ def editar_os(id_os):
             valor_repasse,
             status,
             total_custo_pecas,
+            data,
             id_os
         ))
 
@@ -3718,15 +3777,17 @@ def editar_os(id_os):
                     descricao,
                     valor,
                     executante,
-                    valor_repasse
+                    valor_repasse,
+                    desconto_cartao
                 )
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 id_os,
                 servico["descricao"],
                 servico["valor"],
                 servico["executante"],
-                servico["valor_repasse"]
+                servico["valor_repasse"],
+                servico["desconto_cartao"]
             ))
 
         conexao.commit()
@@ -3780,7 +3841,7 @@ def editar_os(id_os):
             descricao,
             valor,
             COALESCE(executante, ''),
-            COALESCE(valor_repasse, 0)
+            COALESCE(valor_repasse, 0) + COALESCE(desconto_cartao, 0)
         FROM servicos_os
         WHERE id_os = ?
         ORDER BY id_servico
@@ -3808,6 +3869,7 @@ def editar_os(id_os):
 
     return render_template(
         "editar_os.html",
+        funcionarios=funcionarios,
         os=os_dados,
         clientes=lista_clientes,
         veiculos=lista_veiculos,
@@ -4525,6 +4587,52 @@ def obter_dados_relatorio_servicos(data_inicio="", data_fim=""):
     }
 
 
+def obter_relatorio_pagamento(data_inicio="", data_fim="", funcionario=""):
+    conexao = conectar_banco()
+    try:
+        condicoes = ["os.status = 'Finalizada'", "s.executante = ? COLLATE NOCASE"]
+        parametros = [funcionario]
+        if data_inicio:
+            condicoes.append("date(os.data) >= date(?)")
+            parametros.append(data_inicio)
+        if data_fim:
+            condicoes.append("date(os.data) <= date(?)")
+            parametros.append(data_fim)
+        linhas = conexao.execute(f"""
+            SELECT os.id_os, os.data, COALESCE(v.placa, '') || ' ' || COALESCE(v.modelo, ''),
+                   s.descricao, os.forma_pagamento,
+                   COALESCE(s.valor_repasse, 0) + COALESCE(s.desconto_cartao, 0),
+                   COALESCE(s.desconto_cartao, 0), COALESCE(s.valor_repasse, 0)
+            FROM servicos_os s
+            JOIN ordens_servico os ON os.id_os = s.id_os
+            LEFT JOIN veiculos v ON v.id_veiculo = os.id_veiculo
+            WHERE {' AND '.join(condicoes)}
+            ORDER BY date(os.data), os.id_os, s.id_servico
+        """, parametros).fetchall()
+    finally:
+        conexao.close()
+
+    bruto = round(sum(r[5] for r in linhas), 2)
+    desconto = round(sum(r[6] for r in linhas), 2)
+    liquido = round(sum(r[7] for r in linhas), 2)
+    return {
+        "titulo": f"Pagamento de serviços - {funcionario or 'Selecione um profissional'}",
+        "colunas": ["OS", "Data", "Veículo", "Serviço", "Pagamento", "Repasse bruto", "Desconto cartão", "Repasse líquido"],
+        "larguras": [15, 22, 46, 65, 30, 30, 33, 32],
+        "linhas": [
+            [f"#{r[0]:04d}", formatar_data_br(r[1]), r[2], r[3], r[4] or "",
+             formatar_moeda_br(r[5]), formatar_moeda_br(r[6]), formatar_moeda_br(r[7])]
+            for r in linhas
+        ],
+        "totais": [
+            {"titulo": "Serviços finalizados", "valor": str(len(linhas))},
+            {"titulo": "Repasse bruto", "valor": formatar_moeda_br(bruto)},
+            {"titulo": "Desconto de cartão", "valor": formatar_moeda_br(desconto)},
+            {"titulo": "Total líquido a pagar", "valor": formatar_moeda_br(liquido)},
+        ],
+    }
+
+
 def obter_dados_relatorio_pecas(data_inicio="", data_fim=""):
     conexao = conectar_banco()
     cursor = conexao.cursor()
@@ -4796,7 +4904,7 @@ def gerar_pdf_relatorio_gerencial(tipo, titulo, colunas, col_larguras, linhas_fo
     buffer = io.BytesIO()
 
     # Landscape para tabelas largas (servicos e pecas), portrait para prestadores e financeiro
-    usar_landscape = tipo in ("mao-de-obra", "pecas")
+    usar_landscape = tipo in ("mao-de-obra", "pecas", "pagamentos")
     tamanho_pagina = landscape(A4) if usar_landscape else A4
 
     doc = SimpleDocTemplate(
@@ -4855,7 +4963,7 @@ def gerar_pdf_relatorio_gerencial(tipo, titulo, colunas, col_larguras, linhas_fo
     ]
 
     info_titulo = [
-        Paragraph(titulo.upper(), estilo_titulo_relatorio),
+        Paragraph(escape(titulo.upper()), estilo_titulo_relatorio),
         Paragraph(f"Período: {periodo_str}", estilo_periodo)
     ]
 
@@ -4907,7 +5015,7 @@ def gerar_pdf_relatorio_gerencial(tipo, titulo, colunas, col_larguras, linhas_fo
     for row in linhas_formatadas:
         row_cells = []
         for i, val in enumerate(row):
-            texto = str(val) if val is not None else ""
+            texto = escape(str(val)) if val is not None else ""
             if "R$" in texto or (isinstance(val, (int, float)) and not str(val).startswith("#")):
                 row_cells.append(Paragraph(texto, estilo_td_num))
             elif texto.startswith("#") or (len(texto) <= 10 and "/" in texto):
@@ -4947,6 +5055,17 @@ def relatorios():
     data_inicio = request.args.get("data_inicio", "").strip()
     data_fim = request.args.get("data_fim", "").strip()
 
+    funcionario = request.args.get("funcionario", "").strip()
+    conexao = conectar_banco()
+    try:
+        profissionais = [r[0] for r in conexao.execute("""
+            SELECT nome FROM prestadores
+            UNION SELECT executante FROM servicos_os WHERE TRIM(COALESCE(executante, '')) != ''
+            ORDER BY 1 COLLATE NOCASE
+        """).fetchall()]
+    finally:
+        conexao.close()
+
     if data_inicio and data_fim:
         periodo_fmt = f"{formatar_data_br(data_inicio)} até {formatar_data_br(data_fim)}"
     elif data_inicio:
@@ -4956,7 +5075,17 @@ def relatorios():
     else:
         periodo_fmt = "Todo o Período Cadastrado"
 
-    if tipo == "pecas":
+    if tipo == "pagamentos":
+        dados = obter_relatorio_pagamento(data_inicio, data_fim, funcionario)
+        titulo_relatorio = dados["titulo"]
+        kpis = dados["totais"]
+        colunas = [{"nome": nome, "alinhamento": "right" if i >= 5 else "left"}
+                   for i, nome in enumerate(dados["colunas"])]
+        colunas_direita = [5, 6, 7]
+        colunas_centro = [0, 1]
+        itens_formatados = dados["linhas"]
+
+    elif tipo == "pecas":
         titulo_relatorio = "Peças & Margem de Lucro"
         dados = obter_dados_relatorio_pecas(data_inicio, data_fim)
         tot = dados["totais"]
@@ -5088,6 +5217,8 @@ def relatorios():
     return render_template(
         "relatorios.html",
         tipo=tipo,
+        funcionario=funcionario,
+        profissionais=profissionais,
         titulo_relatorio=titulo_relatorio,
         data_inicio=data_inicio,
         data_fim=data_fim,
@@ -5105,7 +5236,7 @@ def exportar_relatorio(tipo, formato):
     tipo = tipo.strip().lower()
     formato = formato.strip().lower()
 
-    if tipo not in ("mao-de-obra", "pecas", "prestadores", "financeiro"):
+    if tipo not in ("mao-de-obra", "pecas", "prestadores", "financeiro", "pagamentos"):
         return "Tipo de relatório inválido.", 400
 
     if formato not in ("pdf", "csv", "xml"):
@@ -5129,7 +5260,16 @@ def exportar_relatorio(tipo, formato):
 
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    if tipo == "mao-de-obra":
+    if tipo == "pagamentos":
+        dados = obter_relatorio_pagamento(data_inicio, data_fim, request.args.get("funcionario", "").strip())
+        titulo = dados["titulo"]
+        colunas = dados["colunas"]
+        col_larguras = dados["larguras"]
+        totais_cards = dados["totais"]
+        linhas_dados = dados["linhas"]
+        nome_base = f"pagamento_servicos_{sufixo_data}_{timestamp_str}"
+
+    elif tipo == "mao-de-obra":
         titulo = "Relatório de Mão de Obra e Serviços"
         dados = obter_dados_relatorio_servicos(data_inicio, data_fim)
         tot = dados["totais"]
@@ -5267,6 +5407,11 @@ def api_relatorios(tipo):
     tipo = tipo.strip().lower()
     data_inicio = request.args.get("data_inicio", "").strip()
     data_fim = request.args.get("data_fim", "").strip()
+
+    if tipo == "pagamentos":
+        return jsonify(obter_relatorio_pagamento(
+            data_inicio, data_fim, request.args.get("funcionario", "").strip()
+        ))
 
     if tipo == "mao-de-obra":
         dados = obter_dados_relatorio_servicos(data_inicio, data_fim)
