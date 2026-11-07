@@ -383,6 +383,15 @@ def garantir_tabelas_sistema():
     if "valor_custo_pecas" not in colunas_os:
         cursor.execute("ALTER TABLE ordens_servico ADD COLUMN valor_custo_pecas REAL NOT NULL DEFAULT 0")
 
+    for coluna, definicao in (
+        ("cartao_tipo", "TEXT"),
+        ("cartao_parcelas", "INTEGER"),
+        ("taxa_cartao", "REAL NOT NULL DEFAULT 0"),
+        ("valor_taxa_cartao", "REAL NOT NULL DEFAULT 0"),
+    ):
+        if coluna not in colunas_os:
+            cursor.execute(f"ALTER TABLE ordens_servico ADD COLUMN {coluna} {definicao}")
+
     cursor.execute("PRAGMA table_info(veiculos)")
     colunas_veic = [linha[1] for linha in cursor.fetchall()]
     if "cor" not in colunas_veic:
@@ -1885,12 +1894,48 @@ def data_servico_formulario(data_anterior=None):
     return datetime.combine(dia, anterior.time()).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def calcular_repasse_cartao(repasse_bruto, pagamento, funcionario):
-    bruto = Decimal(str(repasse_bruto)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    desconto = Decimal("0.00")
-    if funcionario and "cart" in (pagamento or "").casefold():
-        desconto = (bruto * Decimal("0.06")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    return float(bruto - desconto), float(desconto)
+TAXAS_CARTAO = {
+    "debito": {"1": 1.48},
+    "credito": {"1": 4.39, "2": 5.59, "3": 6.49, "4": 7.39, "5": 8.29,
+                "6": 9.19, "7": 10.36, "8": 11.26, "9": 12.15, "10": 13.05},
+}
+
+
+def dados_cartao_formulario(pagamento):
+    if pagamento != "Cartão":
+        return None, None, 0.0
+    tipo = request.form.get("cartao_tipo", "")
+    parcelas = request.form.get("cartao_parcelas", "1") if tipo == "credito" else "1"
+    taxa = TAXAS_CARTAO.get(tipo, {}).get(parcelas)
+    if taxa is None:
+        raise ValueError("Selecione débito ou crédito e de 1 a 10 parcelas.")
+    return tipo, int(parcelas), taxa
+
+
+def desconto_percentual(valor, taxa):
+    bruto = Decimal(str(valor)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    desconto = (bruto * Decimal(str(taxa)) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return float(desconto)
+
+
+def calcular_repasse_cartao(repasse_bruto, taxa, funcionario):
+    bruto = round(repasse_bruto, 2)
+    desconto = desconto_percentual(bruto, taxa) if funcionario else 0.0
+    return round(bruto - desconto, 2), desconto
+
+
+def descricao_pagamento(pagamento, tipo, parcelas):
+    if pagamento != "Cartão" or not tipo:
+        return pagamento
+    return "Cartão débito" if tipo == "debito" else f"Cartão crédito {parcelas}x"
+
+
+def salvar_dados_cartao(conexao, id_os, tipo, parcelas, taxa, valor_total):
+    conexao.execute("""
+        UPDATE ordens_servico
+        SET cartao_tipo = ?, cartao_parcelas = ?, taxa_cartao = ?, valor_taxa_cartao = ?
+        WHERE id_os = ?
+    """, (tipo, parcelas, taxa, desconto_percentual(valor_total, taxa), id_os))
 
 
 def nomes_funcionarios(conexao):
@@ -1926,6 +1971,7 @@ def nova_os():
 
         try:
             data = data_servico_formulario()
+            cartao_tipo, cartao_parcelas, taxa_cartao = dados_cartao_formulario(pagamento_selecionado)
         except ValueError as erro:
             conexao.close()
             return str(erro), 400
@@ -2033,7 +2079,7 @@ def nova_os():
                 repasse_val = valor * (pct / 100.0)
 
             repasse_val, desconto_cartao = calcular_repasse_cartao(
-                repasse_val, pagamento_selecionado,
+                repasse_val, taxa_cartao,
                 executante.casefold() in {nome.casefold() for nome in funcionarios}
             )
             total_repasse_os += repasse_val
@@ -2127,6 +2173,7 @@ def nova_os():
                 servico["desconto_cartao"]
             ))
 
+        salvar_dados_cartao(conexao, id_os, cartao_tipo, cartao_parcelas, taxa_cartao, valor_total)
         conexao.commit()
         conexao.close()
 
@@ -2181,6 +2228,9 @@ def nova_os():
     return render_template(
         "os.html",
         data_servico=data_servico,
+        taxas_cartao=TAXAS_CARTAO,
+        cartao_tipo="",
+        cartao_parcelas=1,
         funcionarios=funcionarios,
         clientes=lista_clientes,
         veiculos=lista_veiculos,
@@ -2622,7 +2672,10 @@ def visualizar_os(id_os):
             ordens_servico.valor_total,
             ordens_servico.valor_repasse,
             ordens_servico.status,
-            COALESCE(ordens_servico.valor_custo_pecas, 0)
+            COALESCE(ordens_servico.valor_custo_pecas, 0),
+            ordens_servico.valor_taxa_cartao,
+            ordens_servico.cartao_tipo,
+            ordens_servico.cartao_parcelas
         FROM ordens_servico
 
         INNER JOIN clientes
@@ -2682,7 +2735,8 @@ def visualizar_os(id_os):
     lucro_pecas = total_pecas - custo_pecas
     total_os = float(os_dados[13] or 0)
     repasse = float(os_dados[14] or 0)
-    lucro_oficina_os = total_os - repasse - custo_pecas
+    valor_taxa_cartao = float(os_dados[17] or 0)
+    lucro_oficina_os = total_os - valor_taxa_cartao - repasse - custo_pecas
 
     repasses_por_executante = {}
     for s in servicos:
@@ -2701,6 +2755,8 @@ def visualizar_os(id_os):
     return render_template(
         "visualizar_os.html",
         os=os_dados,
+        pagamento_detalhado=descricao_pagamento(os_dados[10], os_dados[18], os_dados[19]),
+        valor_taxa_cartao=valor_taxa_cartao,
         pecas=pecas,
         servicos=servicos,
         custo_pecas=custo_pecas,
@@ -2740,7 +2796,9 @@ def gerar_pdf_os(id_os):
             ordens_servico.valor_mao_obra,
             ordens_servico.valor_pecas,
             ordens_servico.valor_total,
-            ordens_servico.status
+            ordens_servico.status,
+            ordens_servico.cartao_tipo,
+            ordens_servico.cartao_parcelas
         FROM ordens_servico
 
         INNER JOIN clientes
@@ -3412,7 +3470,7 @@ def gerar_pdf_os(id_os):
             ],
             [
                 "Pagamento:",
-                os_dados[10]
+                descricao_pagamento(os_dados[10], os_dados[15], os_dados[16])
             ]
         ],
         colWidths=[120 * mm, 60 * mm]
@@ -3535,7 +3593,9 @@ def editar_os(id_os):
             data,
             responsavel,
             forma_pagamento,
-            status
+            status,
+            cartao_tipo,
+            cartao_parcelas
         FROM ordens_servico
         WHERE id_os = ?
     """, (id_os,))
@@ -3551,6 +3611,7 @@ def editar_os(id_os):
     if request.method == "POST":
         try:
             data = data_servico_formulario(os_dados[3])
+            cartao_tipo, cartao_parcelas, taxa_cartao = dados_cartao_formulario(request.form.get("pagamento"))
         except ValueError as erro:
             conexao.close()
             return str(erro), 400
@@ -3684,7 +3745,7 @@ def editar_os(id_os):
                 repasse_val = valor * (pct / 100.0)
 
             repasse_val, desconto_cartao = calcular_repasse_cartao(
-                repasse_val, pagamento,
+                repasse_val, taxa_cartao,
                 executante.casefold() in {nome.casefold() for nome in funcionarios}
             )
             total_repasse_os += repasse_val
@@ -3790,6 +3851,7 @@ def editar_os(id_os):
                 servico["desconto_cartao"]
             ))
 
+        salvar_dados_cartao(conexao, id_os, cartao_tipo, cartao_parcelas, taxa_cartao, valor_total)
         conexao.commit()
         conexao.close()
 
@@ -3870,6 +3932,9 @@ def editar_os(id_os):
     return render_template(
         "editar_os.html",
         funcionarios=funcionarios,
+        taxas_cartao=TAXAS_CARTAO,
+        cartao_tipo=os_dados[7] or "",
+        cartao_parcelas=os_dados[8] or 1,
         os=os_dados,
         clientes=lista_clientes,
         veiculos=lista_veiculos,
@@ -3971,7 +4036,8 @@ def financeiro():
             COALESCE(SUM(valor_pecas), 0),
             COALESCE(SUM(valor_mao_obra), 0),
             COALESCE(SUM(valor_repasse), 0),
-            COALESCE(SUM(valor_custo_pecas), 0)
+            COALESCE(SUM(valor_custo_pecas), 0),
+            COALESCE(SUM(valor_taxa_cartao), 0)
 
         FROM ordens_servico
 
@@ -3988,10 +4054,12 @@ def financeiro():
     total_mao_obra = dados[3]
     repasse_henrique = dados[4]
     total_custo_pecas = dados[5]
+    taxas_cartao = dados[6]
+    recebimento_liquido = faturamento - taxas_cartao
 
     lucro_pecas = total_pecas - total_custo_pecas
     lucro_bruto_operacional = (
-        faturamento -
+        recebimento_liquido -
         repasse_henrique -
         total_custo_pecas
     )
@@ -4033,9 +4101,13 @@ def financeiro():
 
     cursor.execute(f"""
         SELECT
-            forma_pagamento,
+            CASE WHEN cartao_tipo = 'debito' THEN 'Cartão débito'
+                 WHEN cartao_tipo = 'credito' THEN 'Cartão crédito ' || cartao_parcelas || 'x'
+                 ELSE forma_pagamento END,
             COUNT(*),
-            COALESCE(SUM(valor_total), 0)
+            COALESCE(SUM(valor_total), 0),
+            COALESCE(SUM(valor_taxa_cartao), 0),
+            COALESCE(SUM(valor_total - valor_taxa_cartao), 0)
 
         FROM ordens_servico
 
@@ -4043,7 +4115,7 @@ def financeiro():
 
         {filtro_data}
 
-        GROUP BY forma_pagamento
+        GROUP BY 1
 
         ORDER BY SUM(valor_total) DESC
     """, parametros)
@@ -4104,6 +4176,8 @@ def financeiro():
         "financeiro.html",
         quantidade_os=quantidade_os,
         faturamento=faturamento,
+        taxas_cartao=taxas_cartao,
+        recebimento_liquido=recebimento_liquido,
         total_pecas=total_pecas,
         total_custo_pecas=total_custo_pecas,
         lucro_pecas=lucro_pecas,
@@ -4142,7 +4216,8 @@ def dashboard():
             COALESCE(SUM(valor_pecas), 0),
             COALESCE(SUM(valor_mao_obra), 0),
             COALESCE(SUM(valor_repasse), 0),
-            COALESCE(SUM(valor_custo_pecas), 0)
+            COALESCE(SUM(valor_custo_pecas), 0),
+            COALESCE(SUM(valor_taxa_cartao), 0)
         FROM ordens_servico
         WHERE status = 'Finalizada'
     """)
@@ -4155,10 +4230,12 @@ def dashboard():
     total_mao_obra = dados[3]
     repasse_henrique = dados[4]
     total_custo_pecas = dados[5]
+    taxas_cartao = dados[6]
+    recebimento_liquido = faturamento - taxas_cartao
 
     lucro_pecas = total_pecas - total_custo_pecas
     lucro_bruto_operacional = (
-        faturamento -
+        recebimento_liquido -
         repasse_henrique -
         total_custo_pecas
     )
@@ -4235,6 +4312,8 @@ def dashboard():
 
         quantidade_os=quantidade_os,
         faturamento=faturamento,
+        taxas_cartao=taxas_cartao,
+        recebimento_liquido=recebimento_liquido,
         total_pecas=total_pecas,
         total_custo_pecas=total_custo_pecas,
         lucro_pecas=lucro_pecas,
@@ -4600,7 +4679,10 @@ def obter_relatorio_pagamento(data_inicio="", data_fim="", funcionario=""):
             parametros.append(data_fim)
         linhas = conexao.execute(f"""
             SELECT os.id_os, os.data, COALESCE(v.placa, '') || ' ' || COALESCE(v.modelo, ''),
-                   s.descricao, os.forma_pagamento,
+                   s.descricao,
+                   CASE WHEN os.cartao_tipo = 'debito' THEN 'Cartão débito'
+                        WHEN os.cartao_tipo = 'credito' THEN 'Cartão crédito ' || os.cartao_parcelas || 'x'
+                        ELSE os.forma_pagamento END,
                    COALESCE(s.valor_repasse, 0) + COALESCE(s.desconto_cartao, 0),
                    COALESCE(s.desconto_cartao, 0), COALESCE(s.valor_repasse, 0)
             FROM servicos_os s
@@ -4768,7 +4850,8 @@ def obter_dados_relatorio_financeiro(data_inicio="", data_fim=""):
             COALESCE(SUM(valor_pecas), 0),
             COALESCE(SUM(valor_mao_obra), 0),
             COALESCE(SUM(valor_repasse), 0),
-            COALESCE(SUM(valor_custo_pecas), 0)
+            COALESCE(SUM(valor_custo_pecas), 0),
+            COALESCE(SUM(valor_taxa_cartao), 0)
         FROM ordens_servico
         WHERE status = 'Finalizada'
         {filtro_os}
@@ -4781,9 +4864,11 @@ def obter_dados_relatorio_financeiro(data_inicio="", data_fim=""):
     faturamento_mao_obra = dados_os[3]
     total_repasses = dados_os[4]
     custo_pecas = dados_os[5]
+    taxas_cartao = dados_os[6]
+    recebimento_liquido = faturamento_total - taxas_cartao
 
     lucro_pecas = faturamento_pecas - custo_pecas
-    lucro_bruto_operacional = faturamento_total - total_repasses - custo_pecas
+    lucro_bruto_operacional = recebimento_liquido - total_repasses - custo_pecas
 
     # Despesas do período
     cursor.execute(f"""
@@ -4827,6 +4912,8 @@ def obter_dados_relatorio_financeiro(data_inicio="", data_fim=""):
     return {
         "qtd_os": qtd_os,
         "faturamento_total": faturamento_total,
+        "taxas_cartao": taxas_cartao,
+        "recebimento_liquido": recebimento_liquido,
         "faturamento_pecas": faturamento_pecas,
         "faturamento_mao_obra": faturamento_mao_obra,
         "total_repasses": total_repasses,
@@ -5051,7 +5138,9 @@ def gerar_pdf_relatorio_gerencial(tipo, titulo, colunas, col_larguras, linhas_fo
 
 @app.route("/relatorios")
 def relatorios():
-    tipo = request.args.get("tipo", "mao-de-obra").strip().lower()
+    tipo = request.args.get("tipo", "pagamentos").strip().lower()
+    if tipo == "mao-de-obra":
+        return redirect(url_for("relatorios", **{**request.args.to_dict(), "tipo": "pagamentos"}))
     data_inicio = request.args.get("data_inicio", "").strip()
     data_fim = request.args.get("data_fim", "").strip()
 
@@ -5155,6 +5244,8 @@ def relatorios():
         titulo_relatorio = "Fechamento Financeiro / DRE Consolidado"
         dados = obter_dados_relatorio_financeiro(data_inicio, data_fim)
         kpis = [
+            {"titulo": "Taxas de cartão", "valor": formatar_moeda_br(dados["taxas_cartao"])},
+            {"titulo": "Recebimento líquido", "valor": formatar_moeda_br(dados["recebimento_liquido"])},
             {"titulo": "Faturamento Bruto", "valor": formatar_moeda_br(dados["faturamento_total"]), "cor_classe": "kpi-azul", "subtitulo": f"{dados['qtd_os']} ordens de serviço"},
             {"titulo": "Custos (Peças + Repasses)", "valor": formatar_moeda_br(dados["custo_pecas"] + dados["total_repasses"]), "cor_classe": "kpi-vermelho"},
             {"titulo": "Despesas Operacionais", "valor": formatar_moeda_br(dados["total_despesas"]), "cor_classe": "kpi-vermelho"},
@@ -5351,6 +5442,8 @@ def exportar_relatorio(tipo, formato):
         colunas = ["Data", "Categoria da Despesa", "Descrição do Lançamento", "Valor (R$)"]
         col_larguras = [25, 45, 80, 36] # mm (portrait total 186mm)
         totais_cards = [
+            {"titulo": "Taxas de cartão", "valor": formatar_moeda_br(dados["taxas_cartao"])},
+            {"titulo": "Recebimento líquido", "valor": formatar_moeda_br(dados["recebimento_liquido"])},
             {"titulo": "Faturamento Bruto", "valor": formatar_moeda_br(dados["faturamento_total"]), "cor": "#0d6efd"},
             {"titulo": "Custos (Peças + Repasses)", "valor": formatar_moeda_br(dados["custo_pecas"] + dados["total_repasses"]), "cor": "#dc3545"},
             {"titulo": "Despesas Gerais", "valor": formatar_moeda_br(dados["total_despesas"]), "cor": "#dc3545"},
@@ -5490,6 +5583,8 @@ def api_relatorios(tipo):
             "resumo": {
                 "qtd_os": dados["qtd_os"],
                 "faturamento_total": float(dados["faturamento_total"]),
+                "taxas_cartao": float(dados["taxas_cartao"]),
+                "recebimento_liquido": float(dados["recebimento_liquido"]),
                 "faturamento_pecas": float(dados["faturamento_pecas"]),
                 "faturamento_mao_obra": float(dados["faturamento_mao_obra"]),
                 "total_repasses": float(dados["total_repasses"]),

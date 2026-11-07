@@ -673,7 +673,7 @@
             </span>
 
             <span>
-                {{ os[10] }}
+                {{ pagamento_detalhado }}
             </span>
 
         </div>
@@ -691,6 +691,8 @@
 
         <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
             <div>
+                Taxa da maquininha: <strong>R$ {{ "%.2f"|format(valor_taxa_cartao) }}</strong><br>
+                Recebimento líquido: <strong>R$ {{ "%.2f"|format(os[13] - valor_taxa_cartao) }}</strong><br>
                 Responsável Principal: <strong>{{ os[9] or "Não informado" }}</strong>
                 {% if repasses_por_executante %}
                     <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #f5c6cb;">

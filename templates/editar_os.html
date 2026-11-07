@@ -317,7 +317,7 @@
             <label for="data_servico">Data do serviço</label>
             <input type="date" id="data_servico" name="data_servico" value="{{ os[3][:10] }}" required>
         </div>
-        <p style="font-size: 13px; color: #555;">Os campos de repasse por serviço mostram o valor bruto. Em cartão, o total de repasses desconta 6% dos funcionários.</p>
+        <p style="font-size: 13px; color: #555;">Os campos de repasse por serviço mostram o valor bruto. Em cartão, o repasse dos funcionários usa a taxa da modalidade e das parcelas selecionadas.</p>
 
 
 
@@ -869,6 +869,7 @@
                     </option>
 
                 </select>
+                {% include '_pagamento_cartao.html' %}
 
             </div>
 
@@ -1010,13 +1011,14 @@
 </div>
 
 
+<script>const taxasCartao = {{ taxas_cartao|tojson }};</script>
+<script src="{{ url_for('static', filename='cartao.js') }}"></script>
 <script>
 const funcionariosCartao = {{ funcionarios|tojson }};
 function repasseLiquido(bruto, executante) {
-    const pagamento = document.querySelector('[name="pagamento"]').value;
     const funcionario = funcionariosCartao.some(nome => nome.toLocaleLowerCase() === executante.toLocaleLowerCase());
     const centavos = Math.round((bruto + Number.EPSILON) * 100);
-    const desconto = funcionario && pagamento.toLocaleLowerCase().includes('cart') ? Math.round(centavos * 0.06) : 0;
+    const desconto = funcionario ? Math.round(centavos * Math.round(taxaCartaoSelecionada() * 100) / 10000) : 0;
     return (centavos - desconto) / 100;
 }
 document.addEventListener('DOMContentLoaded', () => {
