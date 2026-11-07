@@ -313,6 +313,13 @@
         action="/os/{{ os[0] }}/editar"
         onsubmit="prepararValores()"
     >
+        <div style="margin-bottom: 20px;">
+            <label for="data_servico">Data do serviço</label>
+            <input type="date" id="data_servico" name="data_servico" value="{{ os[3][:10] }}" required>
+        </div>
+        <p style="font-size: 13px; color: #555;">Os campos de repasse por serviço mostram o valor bruto. Em cartão, o total de repasses desconta 6% dos funcionários.</p>
+
+
 
 
         <!-- CLIENTE -->
@@ -648,7 +655,7 @@
 
                         <div>
                             <label>Repasse (R$)</label>
-                            <input type="text" class="moeda servico-repasse" name="servico_repasse" value="{{ '%.2f'|format(servico[3] or 0)|replace('.', ',') }}" oninput="calcularTotais()" title="Valor interno de repasse">
+                            <input type="text" class="moeda servico-repasse" name="servico_repasse" value="{{ '%.2f'|format(servico[3] or 0)|replace('.', ',') }}" oninput="calcularTotais()" title="Repasse bruto, antes do desconto de cartão">
                         </div>
 
                         <button type="button" class="botao-remover" onclick="removerLinha(this)">
@@ -1004,6 +1011,18 @@
 
 
 <script>
+const funcionariosCartao = {{ funcionarios|tojson }};
+function repasseLiquido(bruto, executante) {
+    const pagamento = document.querySelector('[name="pagamento"]').value;
+    const funcionario = funcionariosCartao.some(nome => nome.toLocaleLowerCase() === executante.toLocaleLowerCase());
+    const centavos = Math.round((bruto + Number.EPSILON) * 100);
+    const desconto = funcionario && pagamento.toLocaleLowerCase().includes('cart') ? Math.round(centavos * 0.06) : 0;
+    return (centavos - desconto) / 100;
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('[name="pagamento"]').addEventListener('change', calcularTotais);
+});
+
 
 /* ============================================================
    CONVERTER VALOR DIGITADO PARA NÚMERO
@@ -1197,10 +1216,10 @@ function calcularTotais() {
         )
         .forEach(function(campo) {
 
-            totalRepasses +=
-                converterParaNumero(
-                    campo.value
-                );
+            totalRepasses += repasseLiquido(
+                converterParaNumero(campo.value),
+                campo.closest('tr').querySelector('[name="servico_executante"]').value
+            );
 
         });
 
@@ -1522,6 +1541,9 @@ async function salvarNovoPrestadorRapidoEdit() {
         });
         let data = await resp.json();
         if (data.sucesso) {
+            if (data.tipo === 'Funcionário' && !funcionariosCartao.includes(data.nome)) {
+                funcionariosCartao.push(data.nome);
+            }
             let existe = listaPrestadores.find(p => p.nome.toLowerCase() === data.nome.toLowerCase());
             if (!existe) {
                 listaPrestadores.push({
@@ -1598,7 +1620,7 @@ function adicionarServico() {
 
         <div>
             <label>Repasse (R$)</label>
-            <input type="text" class="moeda servico-repasse" name="servico_repasse" value="0,00" oninput="calcularTotais()" title="Valor interno de repasse">
+            <input type="text" class="moeda servico-repasse" name="servico_repasse" value="0,00" oninput="calcularTotais()" title="Repasse bruto, antes do desconto de cartão">
         </div>
 
         <button type="button" class="botao-remover" onclick="removerLinha(this)">
