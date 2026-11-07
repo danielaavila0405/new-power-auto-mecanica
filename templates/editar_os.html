@@ -1218,7 +1218,7 @@ function calcularTotais() {
 
             totalRepasses += repasseLiquido(
                 converterParaNumero(campo.value),
-                campo.closest('tr').querySelector('[name="servico_executante"]').value
+                campo.closest('.linha-servico').querySelector('[name="servico_executante"]').value
             );
 
         });
