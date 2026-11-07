@@ -714,10 +714,24 @@
         </div>
 
 
+        <div class="card">
+            <div class="card-titulo">Taxas da maquininha</div>
+            <div class="card-valor">R$ {{ "{:,.2f}".format(taxas_cartao).replace(",", "X").replace(".", ",").replace("X", ".") }}</div>
+        </div>
+        <div class="card">
+            <div class="card-titulo">Recebimento líquido</div>
+            <div class="card-valor">R$ {{ "{:,.2f}".format(recebimento_liquido).replace(",", "X").replace(".", ",").replace("X", ".") }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-titulo">Cartões antigos</div>
+            <p>Edite as OS antigas em cartão e informe débito ou crédito e as parcelas para calcular a taxa da maquininha.</p>
+        </div>
+
         <div class="card card-destaque">
 
             <div class="card-titulo">
-                Faturamento Total
+                Faturamento Bruto
             </div>
 
             <div class="card-valor">
@@ -976,9 +990,11 @@
                         </th>
 
                         <th>
-                            Faturamento
+                            Bruto
                         </th>
 
+                        <th>Taxas</th>
+                        <th>Líquido recebido</th>
                     </tr>
 
                 </thead>
@@ -1007,6 +1023,8 @@
 
                                 </td>
 
+                                <td class="valor">R$ {{ "{:,.2f}".format(pagamento[3]).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+                                <td class="valor">R$ {{ "{:,.2f}".format(pagamento[4]).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
                             </tr>
 
                         {% endfor %}
@@ -1015,7 +1033,7 @@
 
                         <tr>
 
-                            <td colspan="3"
+                            <td colspan="5"
                                 style="text-align: center; color: #666666;">
 
                                 Nenhum faturamento encontrado

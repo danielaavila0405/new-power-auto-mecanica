@@ -1,0 +1,47 @@
+
+<style>
+    .cartao-opcoes {
+        margin: 16px 0;
+        padding: 16px;
+        border: 1px solid #d71920;
+        border-radius: 6px;
+        background: #fff;
+        color: #d71920;
+    }
+    .cartao-opcoes[hidden], .cartao-parcelas[hidden] { display: none; }
+    .cartao-campos { display: flex; flex-wrap: wrap; gap: 16px; }
+    .cartao-campo { flex: 1 1 180px; min-width: 0; }
+    .cartao-opcoes label { display: block; margin: 0 0 8px; color: #d71920; font-weight: bold; }
+    .cartao-opcoes select {
+        width: 100%; box-sizing: border-box; padding: 10px;
+        background: #fff; border: 1px solid #d71920;
+        border-radius: 4px; color: #d71920; font: inherit;
+    }
+    .cartao-opcoes select:focus-visible { outline: 2px solid #d71920; outline-offset: 2px; }
+    .cartao-resumo { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 13px; }
+</style>
+<div id="cartao-opcoes" class="cartao-opcoes" hidden>
+    <div class="cartao-campos">
+        <div class="cartao-campo">
+            <label for="cartao_tipo">Modalidade do cartão</label>
+            <select id="cartao_tipo" name="cartao_tipo" disabled>
+                <option value="">Selecione</option>
+                <option value="debito" {% if cartao_tipo == 'debito' %}selected{% endif %}>Débito</option>
+                <option value="credito" {% if cartao_tipo == 'credito' %}selected{% endif %}>Crédito</option>
+            </select>
+        </div>
+        <div id="cartao-parcelas" class="cartao-campo cartao-parcelas" hidden>
+            <label for="cartao_parcelas">Parcelas do crédito</label>
+            <select id="cartao_parcelas" name="cartao_parcelas" disabled>
+                {% for parcela in range(1, 11) %}
+                <option value="{{ parcela }}" {% if cartao_parcelas == parcela %}selected{% endif %}>{{ 'À vista (1x)' if parcela == 1 else (parcela|string ~ 'x') }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="cartao-resumo" aria-live="polite">
+        <span>Taxa da maquininha <strong id="cartao-taxa">Selecione a modalidade</strong></span>
+        <span>Desconto da entrada <strong id="cartao-desconto">—</strong></span>
+        <span>Recebimento líquido <strong id="cartao-liquido">—</strong></span>
+    </div>
+</div>

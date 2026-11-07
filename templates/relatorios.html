@@ -415,13 +415,6 @@
             <div class="tab-icone"><i class="fa-solid fa-money-bill-transfer"></i></div>
             <div class="tab-texto"><h3>Pagamento do funcionário</h3><p>Serviços, desconto e repasse líquido</p></div>
         </a>
-        <a href="/relatorios?tipo=mao-de-obra&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="tab-item {{ 'ativo' if tipo == 'mao-de-obra' else '' }}">
-            <div class="tab-icone"><i class="fa-solid fa-wrench"></i></div>
-            <div class="tab-texto">
-                <h3>Mão de Obra</h3>
-                <p>Serviços executados e repasses</p>
-            </div>
-        </a>
         <a href="/relatorios?tipo=pecas&data_inicio={{ data_inicio }}&data_fim={{ data_fim }}" class="tab-item {{ 'ativo' if tipo == 'pecas' else '' }}">
             <div class="tab-icone"><i class="fa-solid fa-boxes-stacked"></i></div>
             <div class="tab-texto">
@@ -515,7 +508,7 @@
     </div>
 
     {% if tipo == 'pagamentos' %}
-    <p>O relatório considera serviços de OS finalizadas, pela data do serviço. Mostra o valor a pagar no período selecionado. O desconto de cartão aparece nas OS novas ou editadas após esta atualização.</p>
+    <p>O relatório considera serviços de OS finalizadas, pela data do serviço. Mostra o valor a pagar no período selecionado. O desconto de cartão usa a taxa da modalidade e das parcelas escolhidas nas OS novas ou editadas.</p>
     {% endif %}
     <!-- CARDS DE KPIS / TOTALIZADORES -->
     <div class="cards-kpis">
