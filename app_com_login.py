@@ -399,6 +399,8 @@ def garantir_tabelas_sistema():
 
     cursor.execute("PRAGMA table_info(veiculos)")
     colunas_veic = [linha[1] for linha in cursor.fetchall()]
+    if "ativo" not in colunas_veic:
+        cursor.execute("ALTER TABLE veiculos ADD COLUMN ativo INTEGER DEFAULT 1")
     if "cor" not in colunas_veic:
         cursor.execute("ALTER TABLE veiculos ADD COLUMN cor TEXT")
 
