@@ -9,17 +9,29 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: #eee; color: #222; font: 16px Arial, sans-serif; }
         main { width: min(1050px, 94%); margin: 24px auto; }
-        header, section { background: white; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
-        header { border-bottom: 3px solid #d71920; }
-        h1, h2, h3 { margin: 0 0 12px; }
+        header, section { background: white; border-radius: 10px; padding: clamp(16px, 3vw, 24px); margin-bottom: 16px; }
+        header { border-bottom: 3px solid #d71920; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+        h1 { margin: 0; font-size: clamp(24px, 4vw, 30px); }
+        h2 { margin: 0 0 16px; font-size: 22px; }
+        h3 { margin: 0 0 8px; }
         a { color: #a61419; }
-        label { display: grid; gap: 6px; }
-        input, select, button { font: inherit; padding: 8px; border-radius: 5px; border: 1px solid #aaa; }
+        label { display: grid; gap: 6px; min-width: 0; }
+        input, select, button { font: inherit; padding: 8px 12px; border-radius: 6px; border: 1px solid #aaa; }
+        input:not([type="checkbox"]), select, button { min-height: 42px; }
         button { cursor: pointer; background: #fff; color: #222; }
         button.principal { background: #ad171c; border-color: #ad171c; color: white; }
         .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-        .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
-        .consentimento { display: block; margin: 14px 0; }
+        .campos { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+        .campos input, .campos select { width: 100%; min-width: 0; }
+        .campos select { text-overflow: ellipsis; }
+        .consentimento { display: flex; align-items: baseline; gap: 8px; margin: 16px 0; }
+        .consentimento input { margin: 0; flex: none; }
+        .navegacao { justify-content: space-between; align-items: flex-end; gap: 16px; }
+        .navegacao form { align-items: flex-end; }
+        .atalhos a { display: inline-flex; align-items: center; min-height: 42px; }
+        @media (max-width: 740px) {
+            .campos { grid-template-columns: minmax(0, 1fr); }
+        }
         .visita { border-top: 1px solid #ddd; padding: 16px 0; }
         .visita:last-child { padding-bottom: 0; }
         .detalhes { margin: 0 0 10px; }
@@ -69,10 +81,12 @@
 
     <section>
         <h2>Visitas de {{ dia.strftime('%d/%m/%Y') }}</h2>
-        <nav class="linha" aria-label="Navegar por data">
-            <a href="{{ url_for('agenda.painel', dia=anterior.isoformat()) }}">Dia anterior</a>
-            <a href="{{ url_for('agenda.painel', dia=hoje.isoformat()) }}">Hoje</a>
-            <a href="{{ url_for('agenda.painel', dia=seguinte.isoformat()) }}">Próximo dia</a>
+        <nav class="linha navegacao" aria-label="Navegar por data">
+            <div class="linha atalhos">
+                <a href="{{ url_for('agenda.painel', dia=anterior.isoformat()) }}">Dia anterior</a>
+                <a href="{{ url_for('agenda.painel', dia=hoje.isoformat()) }}">Hoje</a>
+                <a href="{{ url_for('agenda.painel', dia=seguinte.isoformat()) }}">Próximo dia</a>
+            </div>
             <form class="linha" method="get" action="{{ url_for('agenda.painel') }}">
                 <label>Escolher data <input type="date" name="dia" value="{{ dia.isoformat() }}" required></label>
                 <button type="submit">Ir para data</button>
