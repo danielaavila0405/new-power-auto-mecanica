@@ -1,5 +1,6 @@
 import re
 import sqlite3
+from calendar import Calendar
 from contextlib import closing
 from datetime import date, datetime, time, timedelta
 from secrets import compare_digest, token_urlsafe
@@ -78,6 +79,9 @@ def criar_blueprint(conectar_banco):
             dia = date.fromisoformat(request.values.get("dia", agora.date().isoformat()))
             anterior = dia - timedelta(days=1)
             seguinte = dia + timedelta(days=1)
+            inicio_mes = dia.replace(day=1)
+            proximo_mes = (inicio_mes + timedelta(days=32)).replace(day=1)
+            mes_anterior = (inicio_mes - timedelta(days=1)).replace(day=1)
         except (ValueError, OverflowError):
             abort(400)
 
@@ -114,11 +118,36 @@ def criar_blueprint(conectar_banco):
                 SELECT COUNT(*), substr(MIN(horario), 1, 10) FROM agendamentos
                 WHERE status = 'marcado' AND horario < ?
             """, (agora.isoformat(timespec="minutes"),)).fetchone()
+            contagem_dias = dict(conexao.execute("""
+                SELECT substr(horario, 1, 10), COUNT(*) FROM agendamentos
+                WHERE horario >= ? AND horario < ? AND status != 'remarcado'
+                GROUP BY substr(horario, 1, 10)
+            """, (inicio_mes.isoformat(), proximo_mes.isoformat())))
+            resumo = conexao.execute("""
+                WITH RECURSIVE trajetoria(id, status, remarcacoes) AS (
+                    SELECT id, status, 0 FROM agendamentos
+                    WHERE anterior IS NULL AND horario >= ? AND horario < ?
+                    UNION ALL
+                    SELECT a.id, a.status, t.remarcacoes + 1
+                    FROM agendamentos a JOIN trajetoria t ON a.anterior = t.id
+                )
+                SELECT COUNT(*) AS agendados,
+                       COUNT(CASE WHEN t.status = 'compareceu' THEN 1 END) AS compareceram,
+                       COUNT(CASE WHEN t.status = 'compareceu' AND t.remarcacoes > 0 THEN 1 END) AS remarcaram_compareceram,
+                       COUNT(CASE WHEN t.status = 'cancelado' THEN 1 END) AS cancelaram,
+                       COUNT(CASE WHEN t.status = 'faltou' THEN 1 END) AS faltaram,
+                       COUNT(CASE WHEN t.status = 'marcado' THEN 1 END) AS pendentes
+                FROM trajetoria t
+                WHERE NOT EXISTS (SELECT 1 FROM agendamentos a WHERE a.anterior = t.id)
+            """, (inicio_mes.isoformat(), proximo_mes.isoformat())).fetchone()
 
         return render_template("agenda.html", dia=dia, anterior=anterior,
                                seguinte=seguinte, agora=agora.isoformat(timespec="minutes"),
                                hoje=agora.date(), visitas=visitas, veiculos=veiculos, status=STATUS,
-                               csrf=token, pendentes=pendentes, dia_pendente=primeira_pendencia)
+                               csrf=token, pendentes=pendentes, dia_pendente=primeira_pendencia,
+                               calendario=Calendar().monthdayscalendar(dia.year, dia.month),
+                               inicio_mes=inicio_mes, mes_anterior=mes_anterior, proximo_mes=proximo_mes,
+                               contagem_dias=contagem_dias, resumo=resumo)
 
     return agenda
 
@@ -133,7 +162,7 @@ def alterar_agenda(conexao, agora):
             raise ValueError("Agendamento não encontrado.")
 
     if acao in ("marcar", "remarcar"):
-        if visita and visita["status"] not in ("marcado", "faltou"):
+        if visita and visita["status"] not in ("marcado", "faltou", "cancelado"):
             raise ValueError("Este agendamento já foi encerrado.")
         try:
             horario = datetime.strptime(request.form.get("horario", ""), "%Y-%m-%dT%H:%M")

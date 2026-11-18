@@ -45,6 +45,19 @@
         }
         .visita { border-top: 1px solid #ddd; padding: 16px 0; }
         .visita:last-child { padding-bottom: 0; }
+        .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 16px 0; }
+        .calendario > * { min-width: 0; padding: 6px 2px; text-align: center; }
+        .calendario a { min-height: 48px; background: #f1f1f1; border-radius: 5px; color: #222; text-decoration: none; }
+        .calendario a:hover { background: #e3e3e3; }
+        .calendario a[aria-current] { box-shadow: inset 0 0 0 2px #ad171c; }
+        .calendario small { display: block; margin-top: 3px; color: #555; }
+        .resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 10px; margin-bottom: 0; }
+        .resumo > div { padding: 12px; background: #f1f1f1; border-radius: 6px; }
+        .resumo dd { margin: 6px 0 0; font-weight: bold; font-size: 22px; }
+        .acoes-visita { align-items: flex-start; }
+        .acoes-visita details { margin: 0; }
+        .acoes-visita summary { display: flex; align-items: center; width: fit-content; min-height: 42px; padding: 8px 12px; border: 1px solid #aaa; border-radius: 6px; }
+        button:disabled { color: #666; cursor: default; background: #f1f1f1; }
         .detalhes { margin: 0 0 10px; }
         .mensagem { padding: 10px; border-left: 4px solid #357455; background: #fff; }
         .erro { border-color: #ad171c; }
@@ -96,8 +109,9 @@
         </form>
     </section>
 
-    <section>
+    <section id="visitas">
         <h2>Visitas de {{ dia.strftime('%d/%m/%Y') }}</h2>
+        <p><a href="#calendario">Ver calendário e relatório mensal</a></p>
         <nav class="linha navegacao" aria-label="Navegar por data">
             <div class="linha atalhos">
                 <a href="{{ url_for('agenda.painel', dia=anterior.isoformat()) }}">Dia anterior</a>
@@ -125,12 +139,13 @@
             {% if visita.id_os %}
             <a href="{{ url_for('visualizar_os', id_os=visita.id_os) }}">Ver OS nº {{ visita.id_os }}</a>
             {% elif visita.status != 'remarcado' %}
+            <div class="linha acoes-visita">
             <form class="linha" method="post">
                 <input type="hidden" name="csrf" value="{{ csrf }}">
                 <input type="hidden" name="id" value="{{ visita.id }}">
                 {% if visita.status == 'marcado' %}
                 <button name="acao" value="compareceu">Compareceu</button>
-                {% if visita.horario <= agora %}<button name="acao" value="faltou">Não compareceu</button>{% endif %}
+                <button name="acao" value="faltou" {% if visita.horario > agora %}disabled title="Disponível após o horário marcado"{% endif %}>Não compareceu</button>
                 <button name="acao" value="cancelado">Cancelar visita</button>
                 {% else %}
                 <button name="acao" value="marcado">Voltar para marcado</button>
@@ -139,7 +154,7 @@
                 <a href="{{ url_for('nova_os', agendamento=visita.id) }}">Abrir ordem de serviço</a>
                 {% endif %}
             </form>
-            {% if visita.status in ('marcado', 'faltou') %}
+            {% if visita.status in ('marcado', 'faltou', 'cancelado') %}
             <details>
                 <summary>Remarcar visita</summary>
                 <form class="linha" method="post">
@@ -150,12 +165,56 @@
                 </form>
             </details>
             {% endif %}
+            </div>
+            {% if visita.status == 'marcado' and visita.horario > agora %}
+            <p>A opção de registrar falta fica disponível após o horário marcado.</p>
+            {% endif %}
             {% endif %}
         </article>
         {% else %}
         <p>Nenhuma visita marcada para esta data.</p>
         {% endfor %}
     </section>
+    <section id="calendario">
+        <h2>Calendário mensal · {{ inicio_mes.strftime('%m/%Y') }}</h2>
+        <nav class="linha" aria-label="Navegar entre meses">
+            <a href="{{ url_for('agenda.painel', dia=mes_anterior.isoformat(), _anchor='calendario') }}">Mês anterior</a>
+            <a href="{{ url_for('agenda.painel', dia=hoje.isoformat(), _anchor='calendario') }}">Mês atual</a>
+            <a href="{{ url_for('agenda.painel', dia=proximo_mes.isoformat(), _anchor='calendario') }}">Próximo mês</a>
+        </nav>
+        <div class="calendario">
+            {% for semana_dia in ('Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom') %}
+            <strong>{{ semana_dia }}</strong>
+            {% endfor %}
+            {% for semana in calendario %}
+            {% for numero in semana %}
+            {% if numero %}
+            {% set data = inicio_mes.replace(day=numero) %}
+            {% set total = contagem_dias.get(data.isoformat(), 0) %}
+            <a href="{{ url_for('agenda.painel', dia=data.isoformat(), _anchor='visitas') }}"
+               aria-label="{{ data.strftime('%d/%m/%Y') }}, {{ total }} visitas"
+               {% if data == dia %}aria-current="true"{% endif %}>
+                {{ numero }}
+                {% if total %}<small>{{ total }}</small>{% endif %}
+            </a>
+            {% else %}
+            <span aria-hidden="true"></span>
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+        </div>
+        <h3>Relatório do mês</h3>
+        <p>Conta cada visita pela data original marcada e acompanha o desfecho, mesmo quando a remarcação cai em outro mês.</p>
+        <dl class="resumo">
+            <div><dt>Serviços agendados</dt><dd>{{ resumo.agendados }}</dd></div>
+            <div><dt>Compareceram</dt><dd>{{ resumo.compareceram }}</dd></div>
+            <div><dt>Destes, remarcaram e compareceram</dt><dd>{{ resumo.remarcaram_compareceram }}</dd></div>
+            <div><dt>Cancelaram e não remarcaram</dt><dd>{{ resumo.cancelaram }}</dd></div>
+            <div><dt>Faltaram e não remarcaram</dt><dd>{{ resumo.faltaram }}</dd></div>
+            <div><dt>Aguardando desfecho</dt><dd>{{ resumo.pendentes }}</dd></div>
+        </dl>
+    </section>
+
 </main>
 <script>
     const busca = document.querySelector('#busca-veiculo');
