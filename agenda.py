@@ -168,7 +168,17 @@ def criar_blueprint(conectar_banco):
 
 
 def link_aviso(aviso):
-    telefone = (aviso["telefone"] or "").strip()
+    data_visita = date.fromisoformat(aviso["horario"][:10]).strftime("%d/%m/%Y")
+    mensagem = (
+        f"Olá, {aviso['nome']}! Aqui é da New Power Auto Mecânica. "
+        f"Sua visita de {data_visita} ficou pendente. "
+        "Se quiser remarcar, é só responder por aqui."
+    )
+    return link_whatsapp(aviso["telefone"], mensagem)
+
+
+def link_whatsapp(telefone, mensagem):
+    telefone = (telefone or "").strip()
     if not re.fullmatch(r"[+0-9(). -]+", telefone):
         return None
     digitos = re.sub(r"\D", "", telefone)
@@ -176,12 +186,6 @@ def link_aviso(aviso):
         digitos = "55" + digitos
     if not re.fullmatch(r"[1-9][0-9]{9,14}", digitos):
         return None
-    data_visita = date.fromisoformat(aviso["horario"][:10]).strftime("%d/%m/%Y")
-    mensagem = (
-        f"Olá, {aviso['nome']}! Aqui é da New Power Auto Mecânica. "
-        f"Sua visita de {data_visita} ficou pendente. "
-        "Se quiser remarcar, é só responder por aqui."
-    )
     return f"https://wa.me/{digitos}?{urlencode({'text': mensagem})}"
 
 

@@ -48,6 +48,7 @@ from reportlab.platypus import (
 )
 from reportlab.pdfgen import canvas
 from agenda import criar_blueprint, criar_tabela_agenda
+from retornos import criar_blueprint_retornos, criar_tabela_retornos
 
 app = Flask(__name__)
 
@@ -148,6 +149,7 @@ def conectar_banco():
 
 
 app.register_blueprint(criar_blueprint(conectar_banco))
+app.register_blueprint(criar_blueprint_retornos(conectar_banco))
 
 
 def converter_para_float(valor):
@@ -405,6 +407,7 @@ def garantir_tabelas_sistema():
         cursor.execute("ALTER TABLE veiculos ADD COLUMN cor TEXT")
 
     criar_tabela_agenda(conexao)
+    criar_tabela_retornos(conexao)
     conexao.commit()
     conexao.close()
 

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Retornos e campanhas | New Power</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #eee; color: #222; font: 16px Arial, sans-serif; }
+        main { width: min(1050px, 94%); margin: 24px auto; }
+        header, section { background: white; border-radius: 10px; padding: clamp(16px, 3vw, 24px); margin-bottom: 16px; }
+        header { border-bottom: 3px solid #d71920; }
+        h1, h2, h3 { margin: 0 0 12px; }
+        a { color: #a61419; }
+        .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(245px, 100%), 1fr)); align-items: start; gap: 16px; }
+        label.campo { display: grid; gap: 6px; min-width: 0; margin-bottom: 12px; }
+        input:not([type=checkbox]), select, textarea, button, .whatsapp { font: inherit; min-height: 42px; border: 1px solid #aaa; border-radius: 6px; padding: 8px 12px; }
+        input:not([type=checkbox]), select, textarea { min-width: 0; width: 100%; }
+        textarea { resize: vertical; }
+        button { cursor: pointer; background: white; color: #222; }
+        .principal { background: #a61419; border-color: #a61419; color: white; }
+        .whatsapp { display: inline-flex; align-items: center; background: #176344; color: white; text-decoration: none; border-color: #176344; }
+        .consentimento { display: block; margin: 12px 0; }
+        .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        article { padding: 16px 0; border-top: 1px solid #ddd; }
+        article p { margin: 0 0 10px; }
+        .mensagem { padding: 12px; border-left: 4px solid #176344; background: white; }
+        .erro { border-color: #a61419; }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>Retornos e campanhas</h1>
+        <a href="{{ url_for('agenda.painel') }}">Voltar à agenda</a>
+    </header>
+    {% for classe, mensagem in get_flashed_messages(with_categories=true) %}
+    <p class="mensagem {{ classe }}" role="status">{{ mensagem }}</p>
+    {% endfor %}
+    <section>
+        <h2>Programar lembrete</h2>
+        <form method="post">
+            <input type="hidden" name="acao" value="programar">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            {% if ordem %}
+            <p>OS nº {{ ordem.id_os }} · {{ ordem.nome }} · {{ ordem.placa }}</p>
+            {% else %}
+            <label class="campo" id="campo-individual">Cliente ou veículo
+                <select name="destinatarios" id="destinatario-individual" required>
+                    <option value="">Selecione</option>
+                    <optgroup label="Veículos cadastrados">
+                        {% for v in veiculos %}
+                        <option value="veiculo:{{ v.id_veiculo }}">{{ v.nome }} · {{ v.placa }} {{ v.modelo or '' }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Clientes">
+                        {% for cliente in clientes %}
+                        <option value="cliente:{{ cliente.id_cliente }}">{{ cliente.nome }} · {{ cliente.telefone }}</option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </label>
+            <fieldset id="campo-campanha" hidden disabled>
+                <legend>Clientes que aceitaram receber campanhas</legend>
+                <label class="campo">Destinatários
+                    <select name="destinatarios" multiple size="7" required>
+                        {% for cliente in clientes %}
+                        <option value="cliente:{{ cliente.id_cliente }}">{{ cliente.nome }} · {{ cliente.telefone }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </fieldset>
+            {% endif %}
+            <div class="campos">
+                <label class="campo">Motivo
+                    <select name="tipo" id="tipo-retorno" required>
+                        {% for tipo in tipos if not ordem or tipo != campanha %}
+                        <option value="{{ tipo }}">{{ tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="campo">Dia do aviso <input type="date" name="data_aviso" min="{{ hoje }}" required></label>
+                <label class="campo">Quilometragem-alvo (opcional)
+                    <input type="number" name="km_alvo" min="1" max="9999999">
+                    <small>Serve de referência. O lembrete fica disponível no dia escolhido.</small>
+                </label>
+            </div>
+            <label class="campo">Texto da mensagem
+                <textarea name="texto" id="texto-retorno" maxlength="600" rows="3" placeholder="Deixe em branco para usar o texto padrão. Para campanhas, escreva o convite."></textarea>
+            </label>
+            <label class="consentimento"><input type="checkbox" name="autorizado" value="1" required> Confirmei que os destinatários aceitaram receber este tipo de mensagem.</label>
+            <button class="principal" type="submit">Programar lembrete</button>
+        </form>
+    </section>
+    <section>
+        <h2>Lembretes e histórico</h2>
+        {% for lembrete in lembretes %}
+        <article>
+            <h3>{{ lembrete.tipo }} · {{ lembrete.nome }}</h3>
+            <p>{{ lembrete.data_aviso[8:10] }}/{{ lembrete.data_aviso[5:7] }}/{{ lembrete.data_aviso[:4] }}{% if lembrete.placa %} · {{ lembrete.placa }}{% endif %}{% if lembrete.km_alvo %} · {{ lembrete.km_alvo }} km{% endif %}{% if lembrete.id_os %} · <a href="{{ url_for('visualizar_os', id_os=lembrete.id_os) }}">OS nº {{ lembrete.id_os }}</a>{% endif %}</p>
+            {% if lembrete.texto %}<p>{{ lembrete.texto }}</p>{% endif %}
+            {% if lembrete.enviado_em %}
+            <p>Envio registrado em {{ lembrete.enviado_em[8:10] }}/{{ lembrete.enviado_em[5:7] }}/{{ lembrete.enviado_em[:4] }} às {{ lembrete.enviado_em[11:] }}.</p>
+            {% elif lembrete.cancelado_em %}
+            <p>Cancelado</p>
+            {% else %}
+            <p>{{ 'Disponível para envio' if lembrete.disponivel else 'Agendado' }}</p>
+            {% if lembrete.disponivel and not lembrete.link %}<p>Confira o telefone no cadastro para abrir a conversa.</p>{% endif %}
+            <div class="linha">
+                {% if lembrete.link %}<a class="whatsapp" href="{{ lembrete.link }}" target="_blank" rel="noopener noreferrer">Abrir no WhatsApp</a>{% endif %}
+                <form method="post" action="{{ url_for('retornos.painel') }}" class="linha">
+                    <input type="hidden" name="csrf" value="{{ csrf }}">
+                    <input type="hidden" name="id" value="{{ lembrete.id }}">
+                    {% if lembrete.disponivel %}<button name="acao" value="enviar">Registrar envio</button>{% endif %}
+                    <button name="acao" value="cancelar">Cancelar lembrete</button>
+                </form>
+            </div>
+            {% endif %}
+        </article>
+        {% else %}
+        <p>Nenhum lembrete programado.</p>
+        {% endfor %}
+    </section>
+</main>
+{% if not ordem %}
+<script>
+    const tipo = document.querySelector('#tipo-retorno');
+    const campanha = document.querySelector('#campo-campanha');
+    const individual = document.querySelector('#campo-individual');
+    const destinatario = document.querySelector('#destinatario-individual');
+    const texto = document.querySelector('#texto-retorno');
+    function atualizarCampos() {
+        const coletiva = tipo.value === {{ campanha | tojson }};
+        campanha.hidden = campanha.disabled = !coletiva;
+        individual.hidden = destinatario.disabled = coletiva;
+        texto.required = coletiva;
+    }
+    tipo.addEventListener('change', atualizarCampos);
+    atualizarCampos();
+</script>
+{% endif %}
+</body>
+</html>
