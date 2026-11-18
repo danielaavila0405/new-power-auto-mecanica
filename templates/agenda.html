@@ -20,6 +20,7 @@
         input:not([type="checkbox"]), select, button { min-height: 42px; }
         button { cursor: pointer; background: #fff; color: #222; }
         button.principal { background: #ad171c; border-color: #ad171c; color: white; }
+        a.botao-whatsapp { display: inline-flex; align-items: center; min-height: 42px; padding: 8px 12px; border-radius: 6px; background: #176344; color: white; text-decoration: none; }
         .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
         .campos { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
         .campos input, .campos select { width: 100%; min-width: 0; }
@@ -111,7 +112,10 @@
 
     <section id="visitas">
         <h2>Visitas de {{ dia.strftime('%d/%m/%Y') }}</h2>
-        <p><a href="#calendario">Ver calendário e relatório mensal</a></p>
+        <div class="linha">
+            <a href="#calendario">Ver calendário e relatório mensal</a>
+            <a href="#avisos-whatsapp">Avisos de WhatsApp ({{ avisos|length }} pendentes)</a>
+        </div>
         <nav class="linha navegacao" aria-label="Navegar por data">
             <div class="linha atalhos">
                 <a href="{{ url_for('agenda.painel', dia=anterior.isoformat()) }}">Dia anterior</a>
@@ -133,8 +137,10 @@
             <p class="detalhes">WhatsApp {{ visita.telefone_contato }} · Veículo a informar</p>
             {% endif %}
             <p class="detalhes">{{ visita.servico }} · {{ 'A confirmar' if visita.status == 'marcado' and visita.horario < agora else status[visita.status] }}</p>
-            {% if visita.aviso_em %}
-            <p>Convite para remarcar previsto para {{ visita.aviso_em[8:10] }}/{{ visita.aviso_em[5:7] }}/{{ visita.aviso_em[:4] }} às {{ visita.aviso_em[11:] }}. Envio aguardando integração do WhatsApp.</p>
+            {% if visita.aviso_enviado_em %}
+            <p>Envio registrado em {{ visita.aviso_enviado_em[8:10] }}/{{ visita.aviso_enviado_em[5:7] }}/{{ visita.aviso_enviado_em[:4] }} às {{ visita.aviso_enviado_em[11:] }}.</p>
+            {% elif visita.aviso_em %}
+            <p>Convite para remarcar disponível em {{ visita.aviso_em[8:10] }}/{{ visita.aviso_em[5:7] }}/{{ visita.aviso_em[:4] }} às {{ visita.aviso_em[11:] }}.</p>
             {% endif %}
             {% if visita.id_os %}
             <a href="{{ url_for('visualizar_os', id_os=visita.id_os) }}">Ver OS nº {{ visita.id_os }}</a>
@@ -175,6 +181,34 @@
         <p>Nenhuma visita marcada para esta data.</p>
         {% endfor %}
     </section>
+    <section id="avisos-whatsapp">
+        <h2>Avisos de WhatsApp</h2>
+        {% if avisos %}
+        <p>Abra a conversa, envie a mensagem pelo WhatsApp e depois registre o envio aqui.</p>
+        {% for aviso in avisos %}
+        <article class="visita">
+            <h3>{{ aviso.nome }}</h3>
+            <p class="detalhes">Visita de {{ aviso.horario[8:10] }}/{{ aviso.horario[5:7] }}/{{ aviso.horario[:4] }} às {{ aviso.horario[11:] }} · {{ aviso.telefone or 'Sem telefone' }}</p>
+            {% if not aviso.link %}
+            <p>O telefone precisa ser conferido para abrir a conversa.</p>
+            {% endif %}
+            <div class="linha">
+                {% if aviso.link %}
+                <a class="botao-whatsapp" href="{{ aviso.link }}" target="_blank" rel="noopener noreferrer">Abrir no WhatsApp</a>
+                {% endif %}
+                <form method="post" action="{{ url_for('agenda.painel', dia=dia.isoformat(), _anchor='avisos-whatsapp') }}">
+                    <input type="hidden" name="csrf" value="{{ csrf }}">
+                    <input type="hidden" name="id" value="{{ aviso.id }}">
+                    <button name="acao" value="registrar_envio">Registrar envio</button>
+                </form>
+            </div>
+        </article>
+        {% endfor %}
+        {% else %}
+        <p>Nenhum aviso de falta pendente para envio.</p>
+        {% endif %}
+    </section>
+
     <section id="calendario">
         <h2>Calendário mensal · {{ inicio_mes.strftime('%m/%Y') }}</h2>
         <nav class="linha" aria-label="Navegar entre meses">

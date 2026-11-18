@@ -4,6 +4,7 @@ from calendar import Calendar
 from contextlib import closing
 from datetime import date, datetime, time, timedelta
 from secrets import compare_digest, token_urlsafe
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
@@ -35,6 +36,8 @@ def criar_tabela_agenda(conexao):
         """)
         conexao.execute("DROP TABLE agendamentos")
         conexao.execute("ALTER TABLE agendamentos_novo RENAME TO agendamentos")
+    elif "aviso_enviado_em" not in colunas:
+        conexao.execute("ALTER TABLE agendamentos ADD COLUMN aviso_enviado_em TEXT")
     conexao.execute("CREATE INDEX IF NOT EXISTS agenda_horario ON agendamentos(horario)")
 
 
@@ -51,6 +54,7 @@ def criar_estrutura_agenda(conexao, tabela):
             status TEXT NOT NULL DEFAULT 'marcado',
             autorizado INTEGER NOT NULL DEFAULT 0,
             aviso_em TEXT,
+            aviso_enviado_em TEXT,
             nome_contato TEXT,
             telefone_contato TEXT,
             CHECK (
@@ -99,7 +103,8 @@ def criar_blueprint(conectar_banco):
                     flash("Agenda atualizada.", "sucesso")
                     if novo_horario:
                         dia = novo_horario.date()
-                return redirect(url_for("agenda.painel", dia=dia.isoformat()))
+                ancora = "avisos-whatsapp" if request.form.get("acao") == "registrar_envio" else None
+                return redirect(url_for("agenda.painel", dia=dia.isoformat(), _anchor=ancora))
 
             veiculos = conexao.execute("""
                 SELECT v.id_veiculo, v.placa, v.modelo, c.nome
@@ -140,6 +145,16 @@ def criar_blueprint(conectar_banco):
                 FROM trajetoria t
                 WHERE NOT EXISTS (SELECT 1 FROM agendamentos a WHERE a.anterior = t.id)
             """, (inicio_mes.isoformat(), proximo_mes.isoformat())).fetchone()
+            avisos = []
+            for aviso in conexao.execute("""
+                SELECT a.id, a.horario, a.aviso_em, COALESCE(c.nome, a.nome_contato) AS nome,
+                       COALESCE(c.telefone, a.telefone_contato) AS telefone
+                FROM agendamentos a LEFT JOIN clientes c ON c.id_cliente = a.id_cliente
+                WHERE a.status = 'faltou' AND a.autorizado = 1
+                  AND a.aviso_em <= ? AND a.aviso_enviado_em IS NULL
+                ORDER BY a.aviso_em, a.id
+            """, (agora.isoformat(timespec="minutes"),)):
+                avisos.append(dict(aviso, link=link_aviso(aviso)))
 
         return render_template("agenda.html", dia=dia, anterior=anterior,
                                seguinte=seguinte, agora=agora.isoformat(timespec="minutes"),
@@ -147,9 +162,27 @@ def criar_blueprint(conectar_banco):
                                csrf=token, pendentes=pendentes, dia_pendente=primeira_pendencia,
                                calendario=Calendar().monthdayscalendar(dia.year, dia.month),
                                inicio_mes=inicio_mes, mes_anterior=mes_anterior, proximo_mes=proximo_mes,
-                               contagem_dias=contagem_dias, resumo=resumo)
+                               contagem_dias=contagem_dias, resumo=resumo, avisos=avisos)
 
     return agenda
+
+
+def link_aviso(aviso):
+    telefone = (aviso["telefone"] or "").strip()
+    if not re.fullmatch(r"[+0-9(). -]+", telefone):
+        return None
+    digitos = re.sub(r"\D", "", telefone)
+    if not telefone.startswith("+") and len(digitos) in (10, 11):
+        digitos = "55" + digitos
+    if not re.fullmatch(r"[1-9][0-9]{9,14}", digitos):
+        return None
+    data_visita = date.fromisoformat(aviso["horario"][:10]).strftime("%d/%m/%Y")
+    mensagem = (
+        f"Olá, {aviso['nome']}! Aqui é da New Power Auto Mecânica. "
+        f"Sua visita de {data_visita} ficou pendente. "
+        "Se quiser remarcar, é só responder por aqui."
+    )
+    return f"https://wa.me/{digitos}?{urlencode({'text': mensagem})}"
 
 
 def alterar_agenda(conexao, agora):
@@ -160,6 +193,17 @@ def alterar_agenda(conexao, agora):
                                  (request.form.get("id"),)).fetchone()
         if visita is None:
             raise ValueError("Agendamento não encontrado.")
+
+    if acao == "registrar_envio":
+        momento = agora.isoformat(timespec="minutes")
+        atualizado = conexao.execute("""
+            UPDATE agendamentos SET aviso_enviado_em = ?
+            WHERE id = ? AND status = 'faltou' AND autorizado = 1
+              AND aviso_em <= ? AND aviso_enviado_em IS NULL
+        """, (momento, visita["id"], momento)).rowcount
+        if not atualizado:
+            raise ValueError("Este aviso já foi registrado ou não está pendente.")
+        return
 
     if acao in ("marcar", "remarcar"):
         if visita and visita["status"] not in ("marcado", "faltou", "cancelado"):
