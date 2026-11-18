@@ -468,6 +468,9 @@
         </div>
         <p style="font-size: 13px; color: #555;">Os campos de repasse por serviço mostram o valor bruto. Em cartão, o repasse dos funcionários usa a taxa da modalidade e das parcelas selecionadas.</p>
 
+        {% if id_agendamento is not none %}
+        <input type="hidden" name="agendamento" value="{{ id_agendamento }}">
+        {% endif %}
 
 
         <div class="grid-principal">

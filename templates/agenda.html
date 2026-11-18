@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agenda da Oficina | New Power</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #eee; color: #222; font: 16px Arial, sans-serif; }
+        main { width: min(1050px, 94%); margin: 24px auto; }
+        header, section { background: white; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+        header { border-bottom: 3px solid #d71920; }
+        h1, h2, h3 { margin: 0 0 12px; }
+        a { color: #a61419; }
+        label { display: grid; gap: 6px; }
+        input, select, button { font: inherit; padding: 8px; border-radius: 5px; border: 1px solid #aaa; }
+        button { cursor: pointer; background: #fff; color: #222; }
+        button.principal { background: #ad171c; border-color: #ad171c; color: white; }
+        .linha { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
+        .consentimento { display: block; margin: 14px 0; }
+        .visita { border-top: 1px solid #ddd; padding: 16px 0; }
+        .visita:last-child { padding-bottom: 0; }
+        .detalhes { margin: 0 0 10px; }
+        .mensagem { padding: 10px; border-left: 4px solid #357455; background: #fff; }
+        .erro { border-color: #ad171c; }
+        details { margin-top: 12px; }
+        summary { cursor: pointer; }
+        details form { margin-top: 8px; }
+    </style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>Agenda da Oficina</h1>
+        <a href="{{ url_for('menu') }}">Voltar ao menu</a>
+    </header>
+
+    {% for categoria, mensagem in get_flashed_messages(with_categories=true) %}
+    <p class="mensagem {{ categoria }}" role="status">{{ mensagem }}</p>
+    {% endfor %}
+
+    <section>
+        <h2>Marcar visita</h2>
+        {% if veiculos %}
+        <form method="post">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="acao" value="marcar">
+            <div class="campos">
+                <label>Cliente e veículo
+                    <select name="veiculo" required>
+                        <option value="">Selecione</option>
+                        {% for veiculo in veiculos %}
+                        <option value="{{ veiculo.id_veiculo }}">{{ veiculo.nome }} · {{ veiculo.placa }} {{ veiculo.modelo or '' }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Serviço <input name="servico" required maxlength="180" placeholder="Ex.: Revisão periódica"></label>
+                <label>Data e horário <input type="datetime-local" name="horario" required min="{{ agora }}"></label>
+            </div>
+            <label class="consentimento"><input type="checkbox" name="autorizado" value="1"> Cliente autorizou contato por WhatsApp sobre esta visita</label>
+            <button class="principal" type="submit">Marcar visita</button>
+        </form>
+        {% else %}
+        <p>Cadastre um cliente com um veículo ativo para marcar a primeira visita.</p>
+        {% endif %}
+    </section>
+
+    <section>
+        <h2>Visitas de {{ dia.strftime('%d/%m/%Y') }}</h2>
+        <nav class="linha" aria-label="Navegar por data">
+            <a href="{{ url_for('agenda.painel', dia=anterior.isoformat()) }}">Dia anterior</a>
+            <a href="{{ url_for('agenda.painel', dia=hoje.isoformat()) }}">Hoje</a>
+            <a href="{{ url_for('agenda.painel', dia=seguinte.isoformat()) }}">Próximo dia</a>
+            <form class="linha" method="get" action="{{ url_for('agenda.painel') }}">
+                <label>Escolher data <input type="date" name="dia" value="{{ dia.isoformat() }}" required></label>
+                <button type="submit">Ir para data</button>
+            </form>
+        </nav>
+        {% if pendentes %}
+        <p><a href="{{ url_for('agenda.painel', dia=dia_pendente) }}">Conferir visitas passadas</a> ({{ pendentes }} a confirmar)</p>
+        {% endif %}
+        {% for visita in visitas %}
+        <article class="visita">
+            <h3>{{ visita.horario[11:] }} · {{ visita.nome }} · {{ visita.placa }}</h3>
+            <p class="detalhes">{{ visita.servico }} · {{ 'A confirmar' if visita.status == 'marcado' and visita.horario < agora else status[visita.status] }}</p>
+            {% if visita.aviso_em %}
+            <p>Convite para remarcar previsto para {{ visita.aviso_em[8:10] }}/{{ visita.aviso_em[5:7] }}/{{ visita.aviso_em[:4] }} às {{ visita.aviso_em[11:] }}. Envio aguardando integração do WhatsApp.</p>
+            {% endif %}
+            {% if visita.id_os %}
+            <a href="{{ url_for('visualizar_os', id_os=visita.id_os) }}">Ver OS nº {{ visita.id_os }}</a>
+            {% elif visita.status != 'remarcado' %}
+            <form class="linha" method="post">
+                <input type="hidden" name="csrf" value="{{ csrf }}">
+                <input type="hidden" name="id" value="{{ visita.id }}">
+                {% if visita.status == 'marcado' %}
+                <button name="acao" value="compareceu">Compareceu</button>
+                {% if visita.horario <= agora %}<button name="acao" value="faltou">Não compareceu</button>{% endif %}
+                <button name="acao" value="cancelado">Cancelar visita</button>
+                {% else %}
+                <button name="acao" value="marcado">Voltar para marcado</button>
+                {% endif %}
+                {% if visita.status == 'compareceu' %}
+                <a href="{{ url_for('nova_os', agendamento=visita.id) }}">Abrir ordem de serviço</a>
+                {% endif %}
+            </form>
+            {% if visita.status in ('marcado', 'faltou') %}
+            <details>
+                <summary>Remarcar visita</summary>
+                <form class="linha" method="post">
+                    <input type="hidden" name="csrf" value="{{ csrf }}">
+                    <input type="hidden" name="id" value="{{ visita.id }}">
+                    <label>Novo horário <input type="datetime-local" name="horario" required min="{{ agora }}"></label>
+                    <button name="acao" value="remarcar">Salvar novo horário</button>
+                </form>
+            </details>
+            {% endif %}
+            {% endif %}
+        </article>
+        {% else %}
+        <p>Nenhuma visita marcada para esta data.</p>
+        {% endfor %}
+    </section>
+</main>
+</body>
+</html>

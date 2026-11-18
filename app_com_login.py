@@ -9,7 +9,8 @@ from flask import (
     session,
     g,
     Response,
-    url_for
+    url_for,
+    abort
 )
 import sqlite3
 import os
@@ -46,6 +47,7 @@ from reportlab.platypus import (
     Image
 )
 from reportlab.pdfgen import canvas
+from agenda import criar_blueprint, criar_tabela_agenda
 
 app = Flask(__name__)
 
@@ -143,6 +145,9 @@ def conectar_banco():
     conexao.execute("PRAGMA synchronous = NORMAL;")
     conexao.execute("PRAGMA foreign_keys = ON;")
     return conexao
+
+
+app.register_blueprint(criar_blueprint(conectar_banco))
 
 
 def converter_para_float(valor):
@@ -397,6 +402,7 @@ def garantir_tabelas_sistema():
     if "cor" not in colunas_veic:
         cursor.execute("ALTER TABLE veiculos ADD COLUMN cor TEXT")
 
+    criar_tabela_agenda(conexao)
     conexao.commit()
     conexao.close()
 
@@ -1961,11 +1967,28 @@ def nova_os():
     conexao = conectar_banco()
     cursor = conexao.cursor()
     funcionarios = nomes_funcionarios(conexao)
+    id_agendamento = request.values.get("agendamento", type=int)
+    if id_agendamento is not None:
+        if request.method == "POST":
+            conexao.execute("BEGIN IMMEDIATE")
+        agendamento = cursor.execute("""
+            SELECT a.id_cliente, a.id_veiculo, a.status, a.id_os
+            FROM agendamentos a JOIN veiculos v ON v.id_veiculo = a.id_veiculo
+            WHERE a.id = ? AND v.id_cliente = a.id_cliente AND v.ativo = 1
+        """, (id_agendamento,)).fetchone()
+        if agendamento is None or agendamento[2] != "compareceu":
+            conexao.close()
+            abort(400, "Confirme o comparecimento na agenda antes de abrir a OS.")
+        if agendamento[3] is not None:
+            conexao.close()
+            return redirect(f"/os/{agendamento[3]}")
+        cliente_selecionado, veiculo_selecionado = map(str, agendamento[:2])
 
     if request.method == "POST":
 
-        cliente_selecionado = request.form.get("cliente", "")
-        veiculo_selecionado = request.form.get("veiculo", "")
+        if id_agendamento is None:
+            cliente_selecionado = request.form.get("cliente", "")
+            veiculo_selecionado = request.form.get("veiculo", "")
         responsavel_selecionado = request.form.get("responsavel", "")
         pagamento_selecionado = request.form.get("pagamento", "")
 
@@ -2128,6 +2151,8 @@ def nova_os():
         ))
 
         id_os = cursor.lastrowid
+        if id_agendamento is not None:
+            cursor.execute("UPDATE agendamentos SET id_os = ? WHERE id = ?", (id_os, id_agendamento))
 
         for peca in pecas_salvas:
 
@@ -2232,6 +2257,7 @@ def nova_os():
         cartao_tipo="",
         cartao_parcelas=1,
         funcionarios=funcionarios,
+        id_agendamento=id_agendamento,
         clientes=lista_clientes,
         veiculos=lista_veiculos,
         pecas_catalogo=lista_pecas_catalogo,
