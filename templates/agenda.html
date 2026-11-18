@@ -24,6 +24,9 @@
         .campos { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
         .campos input, .campos select { width: 100%; min-width: 0; }
         .campos select { text-overflow: ellipsis; }
+        .busca-veiculo { grid-column: 1 / -1; max-width: 420px; }
+        .busca-veiculo[hidden] { display: none; }
+        .busca-veiculo small { color: #555; }
         .consentimento { display: flex; align-items: baseline; gap: 8px; margin: 16px 0; }
         .consentimento input { margin: 0; flex: none; }
         .navegacao { justify-content: space-between; align-items: flex-end; gap: 16px; }
@@ -60,8 +63,12 @@
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="acao" value="marcar">
             <div class="campos">
+                <label class="busca-veiculo" id="busca-veiculo" hidden>Buscar cliente ou veículo
+                    <input type="search" id="filtro-veiculo" placeholder="Nome, placa ou modelo" autocomplete="off" aria-controls="veiculo-agenda" aria-describedby="resultado-veiculo">
+                    <small id="resultado-veiculo" role="status"></small>
+                </label>
                 <label>Cliente e veículo
-                    <select name="veiculo" required>
+                    <select name="veiculo" id="veiculo-agenda" required>
                         <option value="">Selecione</option>
                         {% for veiculo in veiculos %}
                         <option value="{{ veiculo.id_veiculo }}">{{ veiculo.nome }} · {{ veiculo.placa }} {{ veiculo.modelo or '' }}</option>
@@ -137,5 +144,40 @@
         {% endfor %}
     </section>
 </main>
+<script>
+    const buscaVeiculo = document.querySelector('#busca-veiculo');
+    if (buscaVeiculo) {
+        const filtro = document.querySelector('#filtro-veiculo');
+        const seletor = document.querySelector('#veiculo-agenda');
+        const resultado = document.querySelector('#resultado-veiculo');
+        const normalizar = texto => texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+        const opcoes = Array.from(seletor.options).slice(1).map(opcao => ({
+            opcao,
+            texto: normalizar(opcao.textContent)
+        }));
+        const inicial = seletor.options[0];
+
+        function filtrarVeiculos() {
+            const termos = normalizar(filtro.value.trim()).split(/\s+/).filter(Boolean);
+            const selecionado = seletor.value;
+            const filtradas = opcoes.filter(({texto}) => termos.every(termo => texto.includes(termo)));
+            seletor.replaceChildren(inicial, ...filtradas.map(({opcao}) => opcao));
+            seletor.value = filtradas.some(({opcao}) => opcao.value === selecionado) ? selecionado : '';
+            resultado.textContent = termos.length
+                ? (filtradas.length ? `${filtradas.length} ${filtradas.length === 1 ? 'veículo encontrado' : 'veículos encontrados'}` : 'Nenhum veículo encontrado')
+                : '';
+        }
+
+        filtro.addEventListener('input', filtrarVeiculos);
+        filtro.addEventListener('keydown', evento => {
+            if (evento.key === 'Enter') {
+                evento.preventDefault();
+                seletor.focus();
+            }
+        });
+        filtrarVeiculos();
+        buscaVeiculo.hidden = false;
+    }
+</script>
 </body>
 </html>
