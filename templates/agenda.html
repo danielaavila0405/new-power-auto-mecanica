@@ -24,9 +24,8 @@
         .campos { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
         .campos input, .campos select { width: 100%; min-width: 0; }
         .campos select { text-overflow: ellipsis; }
-        .busca-veiculo { grid-column: 1 / -1; max-width: 420px; }
-        .busca-veiculo[hidden] { display: none; }
-        .busca-veiculo small { color: #555; }
+        .campos-contato { margin-top: 16px; }
+        [hidden] { display: none !important; }
         .consentimento { display: flex; align-items: baseline; gap: 8px; margin: 16px 0; }
         .consentimento input { margin: 0; flex: none; }
         .navegacao { justify-content: space-between; align-items: flex-end; gap: 16px; }
@@ -58,18 +57,16 @@
 
     <section>
         <h2>Marcar visita</h2>
-        {% if veiculos %}
         <form method="post">
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="acao" value="marcar">
             <div class="campos">
-                <label class="busca-veiculo" id="busca-veiculo" hidden>Buscar cliente ou veículo
-                    <input type="search" id="filtro-veiculo" placeholder="Nome, placa ou modelo" autocomplete="off" aria-controls="veiculo-agenda" aria-describedby="resultado-veiculo">
-                    <small id="resultado-veiculo" role="status"></small>
-                </label>
                 <label>Cliente e veículo
+                    <input type="text" id="busca-veiculo" list="opcoes-veiculo" placeholder="Digite nome, placa ou modelo" autocomplete="off" hidden>
+                    <datalist id="opcoes-veiculo"></datalist>
                     <select name="veiculo" id="veiculo-agenda" required>
                         <option value="">Selecione</option>
+                        <option value="novo">Cliente novo</option>
                         {% for veiculo in veiculos %}
                         <option value="{{ veiculo.id_veiculo }}">{{ veiculo.nome }} · {{ veiculo.placa }} {{ veiculo.modelo or '' }}</option>
                         {% endfor %}
@@ -78,12 +75,14 @@
                 <label>Serviço <input name="servico" required maxlength="180" placeholder="Ex.: Revisão periódica"></label>
                 <label>Data e horário <input type="datetime-local" name="horario" required min="{{ agora }}"></label>
             </div>
+            <button type="button" id="cliente-novo" hidden style="margin-top: 12px">Cliente novo</button>
+            <div class="campos campos-contato" id="dados-contato" hidden>
+                <label>Nome do cliente <input name="nome_contato" maxlength="120" autocomplete="name" disabled></label>
+                <label>WhatsApp com DDD <input name="telefone_contato" type="tel" maxlength="25" autocomplete="tel" disabled></label>
+            </div>
             <label class="consentimento"><input type="checkbox" name="autorizado" value="1"> Cliente autorizou contato por WhatsApp sobre esta visita</label>
             <button class="principal" type="submit">Marcar visita</button>
         </form>
-        {% else %}
-        <p>Cadastre um cliente com um veículo ativo para marcar a primeira visita.</p>
-        {% endif %}
     </section>
 
     <section>
@@ -104,7 +103,10 @@
         {% endif %}
         {% for visita in visitas %}
         <article class="visita">
-            <h3>{{ visita.horario[11:] }} · {{ visita.nome }} · {{ visita.placa }}</h3>
+            <h3>{{ visita.horario[11:] }} · {{ visita.nome }}{% if visita.placa %} · {{ visita.placa }}{% endif %}</h3>
+            {% if visita.telefone_contato %}
+            <p class="detalhes">WhatsApp {{ visita.telefone_contato }} · Veículo a informar</p>
+            {% endif %}
             <p class="detalhes">{{ visita.servico }} · {{ 'A confirmar' if visita.status == 'marcado' and visita.horario < agora else status[visita.status] }}</p>
             {% if visita.aviso_em %}
             <p>Convite para remarcar previsto para {{ visita.aviso_em[8:10] }}/{{ visita.aviso_em[5:7] }}/{{ visita.aviso_em[:4] }} às {{ visita.aviso_em[11:] }}. Envio aguardando integração do WhatsApp.</p>
@@ -122,7 +124,7 @@
                 {% else %}
                 <button name="acao" value="marcado">Voltar para marcado</button>
                 {% endif %}
-                {% if visita.status == 'compareceu' %}
+                {% if visita.status == 'compareceu' and visita.id_veiculo %}
                 <a href="{{ url_for('nova_os', agendamento=visita.id) }}">Abrir ordem de serviço</a>
                 {% endif %}
             </form>
@@ -145,39 +147,45 @@
     </section>
 </main>
 <script>
-    const buscaVeiculo = document.querySelector('#busca-veiculo');
-    if (buscaVeiculo) {
-        const filtro = document.querySelector('#filtro-veiculo');
-        const seletor = document.querySelector('#veiculo-agenda');
-        const resultado = document.querySelector('#resultado-veiculo');
-        const normalizar = texto => texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-        const opcoes = Array.from(seletor.options).slice(1).map(opcao => ({
-            opcao,
-            texto: normalizar(opcao.textContent)
-        }));
-        const inicial = seletor.options[0];
-
-        function filtrarVeiculos() {
-            const termos = normalizar(filtro.value.trim()).split(/\s+/).filter(Boolean);
-            const selecionado = seletor.value;
-            const filtradas = opcoes.filter(({texto}) => termos.every(termo => texto.includes(termo)));
-            seletor.replaceChildren(inicial, ...filtradas.map(({opcao}) => opcao));
-            seletor.value = filtradas.some(({opcao}) => opcao.value === selecionado) ? selecionado : '';
-            resultado.textContent = termos.length
-                ? (filtradas.length ? `${filtradas.length} ${filtradas.length === 1 ? 'veículo encontrado' : 'veículos encontrados'}` : 'Nenhum veículo encontrado')
-                : '';
-        }
-
-        filtro.addEventListener('input', filtrarVeiculos);
-        filtro.addEventListener('keydown', evento => {
-            if (evento.key === 'Enter') {
-                evento.preventDefault();
-                seletor.focus();
-            }
-        });
-        filtrarVeiculos();
-        buscaVeiculo.hidden = false;
+    const busca = document.querySelector('#busca-veiculo');
+    const seletor = document.querySelector('#veiculo-agenda');
+    const lista = document.querySelector('#opcoes-veiculo');
+    const novo = document.querySelector('#cliente-novo');
+    const contato = document.querySelector('#dados-contato');
+    const normalizar = texto => texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    const opcoes = new Map();
+    for (const opcao of Array.from(seletor.options).slice(1)) {
+        let rotulo = opcao.textContent.trim();
+        if (opcoes.has(rotulo)) rotulo += ` (#${opcao.value})`;
+        opcoes.set(rotulo, opcao.value);
+        const sugestao = new Option(rotulo, rotulo);
+        sugestao.label = normalizar(rotulo);
+        lista.append(sugestao);
     }
+
+    function atualizarSelecao() {
+        seletor.value = opcoes.get(busca.value) || '';
+        const novoCliente = seletor.value === 'novo';
+        contato.hidden = !novoCliente;
+        for (const campo of contato.querySelectorAll('input')) {
+            campo.disabled = !novoCliente;
+            campo.required = novoCliente;
+        }
+        busca.setCustomValidity(seletor.value || !busca.value ? '' : 'Selecione uma opção da lista.');
+    }
+    busca.addEventListener('input', atualizarSelecao);
+    busca.addEventListener('change', atualizarSelecao);
+    novo.addEventListener('click', () => {
+        busca.value = 'Cliente novo';
+        atualizarSelecao();
+        contato.querySelector('input').focus();
+    });
+    seletor.required = false;
+    seletor.hidden = true;
+    busca.required = true;
+    busca.hidden = false;
+    novo.hidden = false;
+    atualizarSelecao();
 </script>
 </body>
 </html>

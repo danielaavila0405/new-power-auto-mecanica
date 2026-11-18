@@ -1,3 +1,4 @@
+import re
 import sqlite3
 from contextlib import closing
 from datetime import date, datetime, time, timedelta
@@ -18,21 +19,45 @@ FUSO = ZoneInfo("America/Sao_Paulo")
 
 
 def criar_tabela_agenda(conexao):
-    conexao.execute("""
-        CREATE TABLE IF NOT EXISTS agendamentos (
+    if not conexao.in_transaction:
+        conexao.execute("BEGIN IMMEDIATE")
+    colunas = {coluna[1]: coluna for coluna in conexao.execute("PRAGMA table_info(agendamentos)")}
+    if not colunas:
+        criar_estrutura_agenda(conexao, "agendamentos")
+    elif "nome_contato" not in colunas:
+        criar_estrutura_agenda(conexao, "agendamentos_novo")
+        conexao.execute("""
+            INSERT INTO agendamentos_novo
+                (id, id_veiculo, id_cliente, id_os, anterior, horario, servico, status, autorizado, aviso_em)
+            SELECT id, id_veiculo, id_cliente, id_os, anterior, horario, servico, status, autorizado, aviso_em
+            FROM agendamentos
+        """)
+        conexao.execute("DROP TABLE agendamentos")
+        conexao.execute("ALTER TABLE agendamentos_novo RENAME TO agendamentos")
+    conexao.execute("CREATE INDEX IF NOT EXISTS agenda_horario ON agendamentos(horario)")
+
+
+def criar_estrutura_agenda(conexao, tabela):
+    conexao.execute(f"""
+        CREATE TABLE {tabela} (
             id INTEGER PRIMARY KEY,
-            id_veiculo INTEGER NOT NULL REFERENCES veiculos(id_veiculo) ON DELETE CASCADE,
-            id_cliente INTEGER NOT NULL REFERENCES clientes(id_cliente) ON DELETE CASCADE,
+            id_veiculo INTEGER REFERENCES veiculos(id_veiculo) ON DELETE CASCADE,
+            id_cliente INTEGER REFERENCES clientes(id_cliente) ON DELETE CASCADE,
             id_os INTEGER REFERENCES ordens_servico(id_os) ON DELETE SET NULL,
-            anterior INTEGER UNIQUE REFERENCES agendamentos(id) ON DELETE SET NULL,
+            anterior INTEGER UNIQUE REFERENCES {tabela}(id) ON DELETE SET NULL,
             horario TEXT NOT NULL,
             servico TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'marcado',
             autorizado INTEGER NOT NULL DEFAULT 0,
-            aviso_em TEXT
+            aviso_em TEXT,
+            nome_contato TEXT,
+            telefone_contato TEXT,
+            CHECK (
+                (id_veiculo IS NOT NULL AND id_cliente IS NOT NULL AND nome_contato IS NULL AND telefone_contato IS NULL)
+                OR (id_veiculo IS NULL AND id_cliente IS NULL AND nome_contato IS NOT NULL AND telefone_contato IS NOT NULL)
+            )
         )
     """)
-    conexao.execute("CREATE INDEX IF NOT EXISTS agenda_horario ON agendamentos(horario)")
 
 
 def proximo_aviso(agora):
@@ -78,10 +103,10 @@ def criar_blueprint(conectar_banco):
                 WHERE v.ativo = 1 ORDER BY c.nome, v.placa
             """).fetchall()
             visitas = conexao.execute("""
-                SELECT a.*, v.placa, v.modelo, c.nome
+                SELECT a.*, v.placa, COALESCE(c.nome, a.nome_contato) AS nome
                 FROM agendamentos a
-                JOIN veiculos v USING (id_veiculo)
-                JOIN clientes c ON c.id_cliente = a.id_cliente
+                LEFT JOIN veiculos v USING (id_veiculo)
+                LEFT JOIN clientes c ON c.id_cliente = a.id_cliente
                 WHERE a.horario >= ? AND a.horario < ?
                 ORDER BY a.horario, a.id
             """, (dia.isoformat(), seguinte.isoformat())).fetchall()
@@ -116,19 +141,16 @@ def alterar_agenda(conexao, agora):
             raise ValueError("Informe a data e o horário.") from None
         if horario <= agora:
             raise ValueError("Escolha um horário futuro.")
-        veiculo = conexao.execute("""
-            SELECT id_veiculo, id_cliente FROM veiculos WHERE id_veiculo = ? AND ativo = 1
-        """, (visita["id_veiculo"] if visita else request.form.get("veiculo"),)).fetchone()
-        if veiculo is None or (visita and veiculo["id_cliente"] != visita["id_cliente"]):
-            raise ValueError("Selecione um veículo ativo do cliente.")
+        id_veiculo, id_cliente, nome_contato, telefone_contato = contato_agendamento(conexao, visita)
         servico = visita["servico"] if visita else request.form.get("servico", "").strip()
         if not 1 <= len(servico) <= 180:
             raise ValueError("Informe o serviço em até 180 caracteres.")
         autorizado = visita["autorizado"] if visita else int(request.form.get("autorizado") == "1")
         conexao.execute("""
-            INSERT INTO agendamentos (id_veiculo, id_cliente, horario, servico, autorizado, anterior)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (veiculo["id_veiculo"], veiculo["id_cliente"], horario.isoformat(timespec="minutes"),
+            INSERT INTO agendamentos
+                (id_veiculo, id_cliente, nome_contato, telefone_contato, horario, servico, autorizado, anterior)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (id_veiculo, id_cliente, nome_contato, telefone_contato, horario.isoformat(timespec="minutes"),
               servico, autorizado, visita["id"] if visita else None))
         if visita:
             conexao.execute("UPDATE agendamentos SET status = 'remarcado', aviso_em = NULL WHERE id = ?",
@@ -146,3 +168,25 @@ def alterar_agenda(conexao, agora):
     aviso = proximo_aviso(agora) if acao == "faltou" and visita["autorizado"] else None
     conexao.execute("UPDATE agendamentos SET status = ?, aviso_em = ? WHERE id = ?",
                     (acao, aviso, visita["id"]))
+
+
+def contato_agendamento(conexao, visita):
+    if visita and visita["id_veiculo"] is None:
+        return None, None, visita["nome_contato"], visita["telefone_contato"]
+
+    id_veiculo = visita["id_veiculo"] if visita else request.form.get("veiculo")
+    if id_veiculo == "novo":
+        nome = request.form.get("nome_contato", "").strip()
+        telefone = request.form.get("telefone_contato", "").strip()
+        if not 1 <= len(nome) <= 120:
+            raise ValueError("Informe o nome do novo cliente.")
+        if not re.fullmatch(r"[+0-9(). -]{10,25}", telefone) or not 10 <= len(re.sub(r"\D", "", telefone)) <= 15:
+            raise ValueError("Informe o WhatsApp com DDD.")
+        return None, None, nome, telefone
+
+    veiculo = conexao.execute("""
+        SELECT id_veiculo, id_cliente FROM veiculos WHERE id_veiculo = ? AND ativo = 1
+    """, (id_veiculo,)).fetchone()
+    if veiculo is None or (visita and veiculo["id_cliente"] != visita["id_cliente"]):
+        raise ValueError("Selecione um veículo ativo ou a opção Cliente novo.")
+    return veiculo["id_veiculo"], veiculo["id_cliente"], None, None
