@@ -24,6 +24,15 @@
         .campos { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
         .campos input, .campos select { width: 100%; min-width: 0; }
         .campos select { text-overflow: ellipsis; }
+        .seletor-cliente { position: relative; min-width: 0; }
+        .seletor-cliente label { display: block; margin-bottom: 6px; }
+        .seletor-cliente input { padding-left: 38px; }
+        .lupa { position: absolute; left: 13px; bottom: 15px; width: 13px; height: 13px; border: 2px solid #555; border-radius: 50%; pointer-events: none; }
+        .lupa::after { content: ""; position: absolute; width: 6px; height: 2px; background: #555; transform: rotate(45deg); top: 9px; left: 8px; }
+        .sugestoes { position: absolute; z-index: 2; top: calc(100% + 4px); inset-inline: 0; max-height: 248px; overflow-y: auto; background: #eee; color: #111; border: 1px solid #aaa; border-radius: 6px; box-shadow: 0 4px 12px #0002; }
+        .sugestoes button { display: block; width: 100%; border: 0; border-radius: 0; background: transparent; color: #111; text-align: left; overflow-wrap: anywhere; }
+        .sugestoes button:hover, .sugestoes button:focus { background: #d9d9d9; }
+        .sugestoes p { margin: 0; padding: 12px; }
         .campos-contato { margin-top: 16px; }
         [hidden] { display: none !important; }
         .consentimento { display: flex; align-items: baseline; gap: 8px; margin: 16px 0; }
@@ -61,9 +70,11 @@
             <input type="hidden" name="csrf" value="{{ csrf }}">
             <input type="hidden" name="acao" value="marcar">
             <div class="campos">
-                <label>Cliente e veículo
-                    <input type="text" id="busca-veiculo" list="opcoes-veiculo" placeholder="Digite nome, placa ou modelo" autocomplete="off" hidden>
-                    <datalist id="opcoes-veiculo"></datalist>
+                <div class="seletor-cliente">
+                    <label for="veiculo-agenda" id="rotulo-veiculo">Cliente e veículo</label>
+                    <span class="lupa" aria-hidden="true" hidden></span>
+                    <input type="text" id="busca-veiculo" placeholder="Digite nome, placa ou modelo" autocomplete="off" aria-controls="opcoes-veiculo" hidden>
+                    <div id="opcoes-veiculo" class="sugestoes" role="group" aria-label="Clientes e veículos encontrados" hidden></div>
                     <select name="veiculo" id="veiculo-agenda" required>
                         <option value="">Selecione</option>
                         <option value="novo">Cliente novo</option>
@@ -71,7 +82,7 @@
                         <option value="{{ veiculo.id_veiculo }}">{{ veiculo.nome }} · {{ veiculo.placa }} {{ veiculo.modelo or '' }}</option>
                         {% endfor %}
                     </select>
-                </label>
+                </div>
                 <label>Serviço <input name="servico" required maxlength="180" placeholder="Ex.: Revisão periódica"></label>
                 <label>Data e horário <input type="datetime-local" name="horario" required min="{{ agora }}"></label>
             </div>
@@ -153,18 +164,21 @@
     const novo = document.querySelector('#cliente-novo');
     const contato = document.querySelector('#dados-contato');
     const normalizar = texto => texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-    const opcoes = new Map();
-    for (const opcao of Array.from(seletor.options).slice(1)) {
-        let rotulo = opcao.textContent.trim();
-        if (opcoes.has(rotulo)) rotulo += ` (#${opcao.value})`;
-        opcoes.set(rotulo, opcao.value);
-        const sugestao = new Option(rotulo, rotulo);
-        sugestao.label = normalizar(rotulo);
-        lista.append(sugestao);
+    const area = busca.closest('.seletor-cliente');
+    const opcoes = Array.from(seletor.options).slice(2).map(opcao => ({
+        id: opcao.value,
+        rotulo: opcao.textContent.trim(),
+        texto: normalizar(opcao.textContent)
+    }));
+
+    function selecionar(id, rotulo) {
+        seletor.value = id;
+        busca.value = rotulo;
+        atualizarContato();
+        lista.hidden = true;
     }
 
-    function atualizarSelecao() {
-        seletor.value = opcoes.get(busca.value) || '';
+    function atualizarContato() {
         const novoCliente = seletor.value === 'novo';
         contato.hidden = !novoCliente;
         for (const campo of contato.querySelectorAll('input')) {
@@ -173,19 +187,68 @@
         }
         busca.setCustomValidity(seletor.value || !busca.value ? '' : 'Selecione uma opção da lista.');
     }
-    busca.addEventListener('input', atualizarSelecao);
-    busca.addEventListener('change', atualizarSelecao);
+    function mostrarSugestoes() {
+        const termos = normalizar(busca.value.trim()).split(/\s+/).filter(Boolean);
+        lista.replaceChildren();
+        const encontrados = opcoes.filter(({texto}) => termos.every(termo => texto.includes(termo)));
+        for (const {id, rotulo} of encontrados) {
+            const botao = document.createElement('button');
+            botao.type = 'button';
+            botao.textContent = rotulo;
+            botao.addEventListener('click', () => {
+                busca.focus();
+                selecionar(id, rotulo);
+            });
+            lista.append(botao);
+        }
+        if (!encontrados.length) {
+            const aviso = document.createElement('p');
+            aviso.setAttribute('role', 'status');
+            aviso.textContent = 'Nenhum cliente ou veículo encontrado.';
+            lista.append(aviso);
+        }
+        lista.hidden = false;
+    }
+
+    busca.addEventListener('input', () => {
+        seletor.value = '';
+        atualizarContato();
+        mostrarSugestoes();
+    });
+    busca.addEventListener('focus', () => {
+        if (!seletor.value) mostrarSugestoes();
+    });
+    area.addEventListener('focusout', evento => {
+        if (!area.contains(evento.relatedTarget)) lista.hidden = true;
+    });
+    area.addEventListener('keydown', evento => {
+        if (evento.key === 'Escape' && !lista.hidden) {
+            busca.focus();
+            lista.hidden = true;
+        }
+        if (evento.key === 'ArrowDown' && evento.target === busca) {
+            evento.preventDefault();
+            if (lista.hidden) mostrarSugestoes();
+            lista.querySelector('button')?.focus();
+        }
+        if (evento.key === 'Enter' && evento.target === busca && !seletor.value) {
+            evento.preventDefault();
+            if (lista.hidden) mostrarSugestoes();
+            lista.querySelector('button')?.focus();
+        }
+    });
     novo.addEventListener('click', () => {
-        busca.value = 'Cliente novo';
-        atualizarSelecao();
+        selecionar('novo', 'Cliente novo');
         contato.querySelector('input').focus();
     });
     seletor.required = false;
     seletor.hidden = true;
     busca.required = true;
     busca.hidden = false;
+    document.querySelector('#rotulo-veiculo').htmlFor = busca.id;
+    area.querySelector('.lupa').hidden = false;
     novo.hidden = false;
-    atualizarSelecao();
+    atualizarContato();
 </script>
 </body>
 </html>
